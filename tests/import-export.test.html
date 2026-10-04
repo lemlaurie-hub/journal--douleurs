@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Tests import/export</title>
+</head>
+<body>
+  <pre id="output">Tests en cours…</pre>
+
+  <script type="module">
+    import { createExportPayload, importFromJsonText } from '../src/import-export.js';
+
+    const output = document.querySelector('#output');
+    const lines = [];
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message);
+      }
+      lines.push(`✅ ${message}`);
+    }
+
+    function emptyData() {
+      return {
+        schemaVersion: 1,
+        catalog: [],
+        entries: [],
+        settings: { theme: 'system' }
+      };
+    }
+
+    try {
+      const v3 = [
+        {
+          date: '2026-06-10T10:00:00.000Z',
+          zone: 'Épaule gauche',
+          level: '😕 Gênante',
+          note: 'Après conduite'
+        },
+        {
+          date: '2026-06-11T11:30:00.000Z',
+          zones: ['Omoplate gauche', 'Omoplate droite'],
+          level: '😣 Limitante',
+          note: ''
+        },
+        // Deux entrées réellement identiques doivent rester deux observations.
+        {
+          date: '2026-06-12T12:00:00.000Z',
+          zone: 'Nuque',
+          level: '🙂 Supportable',
+          note: 'Identique'
+        },
+        {
+          date: '2026-06-12T12:00:00.000Z',
+          zone: 'Nuque',
+          level: '🙂 Supportable',
+          note: 'Identique'
+        }
+      ];
+
+      const data = emptyData();
+      const firstImport = importFromJsonText(data, JSON.stringify(v3));
+
+      assert(firstImport.addedEntries === 4, 'les 4 entrées V3 sont importées');
+      assert(data.entries.length === 4, 'aucune vraie entrée identique n’est fusionnée');
+      assert(data.entries.some(entry => entry.note === 'Après conduite'), 'les notes sont conservées');
+      assert(data.entries.some(entry => entry.occurredAt === '2026-06-10T10:00:00.000Z'), 'les dates/heures sont conservées');
+      assert(data.catalog.some(item => item.label === 'Épaule gauche'), 'les anciennes zones deviennent des éléments du catalogue');
+
+      const secondImport = importFromJsonText(data, JSON.stringify(v3));
+      assert(secondImport.addedEntries === 0, 'réimporter le même fichier n’ajoute aucune entrée');
+      assert(data.entries.length === 4, 'l’import V3 est idempotent');
+
+      const payload = createExportPayload(data);
+      const restored = emptyData();
+      const restoreResult = importFromJsonText(restored, JSON.stringify(payload));
+
+      assert(restoreResult.addedEntries === 4, 'une sauvegarde V4 peut être restaurée');
+      assert(restored.entries.length === data.entries.length, 'la restauration V4 conserve le nombre d’entrées');
+      assert(restored.catalog.length === data.catalog.length, 'la restauration V4 conserve le catalogue');
+
+      const repeatedRestore = importFromJsonText(restored, JSON.stringify(payload));
+      assert(repeatedRestore.addedEntries === 0, 'réimporter la même sauvegarde V4 ne duplique rien');
+
+      lines.push('\nTous les tests ont réussi.');
+      output.textContent = lines.join('\n');
+    } catch (error) {
+      lines.push(`❌ ${error.message}`);
+      output.textContent = lines.join('\n');
+      throw error;
+    }
+  </script>
+</body>
+</html>
