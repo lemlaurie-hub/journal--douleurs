@@ -8,7 +8,7 @@
   <title>Journal de suivi santé</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.0.0-1">
+  <link rel="stylesheet" href="./styles.css?v=4.0.0-2">
 </head>
 <body>
   <header class="app-header">
@@ -105,6 +105,32 @@
       </div>
       <div id="catalog-list" class="catalog-list"></div>
     </section>
+
+    <!-- Sauvegarde et migration : aucune donnée n'est envoyée vers un serveur. -->
+    <section class="panel" aria-labelledby="data-tools-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Données</p>
+          <h2 id="data-tools-title">Import / export</h2>
+        </div>
+      </div>
+
+      <p class="field-help">
+        L'export crée une sauvegarde JSON sur le téléphone. L'import ajoute les données sans effacer l'existant et accepte les sauvegardes V4 ainsi que l'ancien format V3.
+      </p>
+
+      <div class="data-actions">
+        <button type="button" class="button button-secondary" id="export-data">
+          Exporter une sauvegarde
+        </button>
+        <button type="button" class="button button-primary" id="choose-import-file">
+          Importer un fichier
+        </button>
+        <input id="import-file" class="visually-hidden" type="file" accept="application/json,.json">
+      </div>
+
+      <p id="import-summary" class="import-summary" hidden aria-live="polite"></p>
+    </section>
   </main>
 
   <dialog id="catalog-dialog" class="dialog">
@@ -151,6 +177,6 @@
 
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
 
-  <script type="module" src="./src/app.js?v=4.0.0-1"></script>
+  <script type="module" src="./src/app.js?v=4.0.0-2"></script>
 </body>
 </html>
