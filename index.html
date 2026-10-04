@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#315f74">
+  <meta name="description" content="Journal personnel de suivi santé, utilisable hors ligne.">
+  <title>Journal de suivi santé</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css?v=4.0.0-1">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">V4</p>
+      <h1>Journal de suivi santé</h1>
+      <p class="subtitle">Douleurs, symptômes et événements — données conservées sur cet appareil.</p>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <!-- Saisie principale -->
+    <section class="panel" aria-labelledby="new-entry-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Saisie rapide</p>
+          <h2 id="new-entry-title">Nouvelle observation</h2>
+        </div>
+        <button type="button" class="button button-secondary" data-open-catalog>
+          + Créer un élément
+        </button>
+      </div>
+
+      <form id="entry-form" novalidate>
+        <fieldset>
+          <legend>Élément(s) concerné(s)</legend>
+          <div id="item-choices" class="choice-list"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Niveau de gêne</legend>
+          <p class="field-help">Tu peux choisir un niveau, ou deux niveaux voisins si c'est entre les deux.</p>
+          <div id="levels" class="level-grid">
+            <button type="button" class="level-button" data-level="1" aria-pressed="false">🙂 Supportable</button>
+            <button type="button" class="level-button" data-level="2" aria-pressed="false">😕 Gênante</button>
+            <button type="button" class="level-button" data-level="3" aria-pressed="false">😣 Limitante</button>
+            <button type="button" class="level-button" data-level="4" aria-pressed="false">😭 Invalidante</button>
+          </div>
+        </fieldset>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Date et heure</span>
+            <input id="occurred-at" name="occurred-at" type="datetime-local" required>
+          </label>
+
+          <label class="checkbox-field">
+            <input id="ongoing" name="ongoing" type="checkbox">
+            <span>Encore maintenant</span>
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Note <small>(facultative)</small></span>
+          <textarea id="note" name="note" rows="4" placeholder="Contexte, sensation, déclencheur éventuel…"></textarea>
+        </label>
+
+        <button type="submit" class="button button-primary button-full">Enregistrer</button>
+      </form>
+    </section>
+
+    <!-- Statistiques placées avant l'historique pour rester accessibles -->
+    <section class="panel" aria-labelledby="stats-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Vue d'ensemble</p>
+          <h2 id="stats-title">Statistiques</h2>
+        </div>
+      </div>
+      <div id="stats" class="stats-grid"></div>
+    </section>
+
+    <!-- Historique à hauteur limitée, défilable -->
+    <section class="panel" aria-labelledby="history-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Dernières saisies</p>
+          <h2 id="history-title">Historique</h2>
+        </div>
+      </div>
+      <div id="history" class="history-list"></div>
+    </section>
+
+    <!-- Catalogue séparé : toutes les créations passent par le même formulaire -->
+    <section class="panel" aria-labelledby="catalog-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Personnalisation</p>
+          <h2 id="catalog-title">Éléments de suivi</h2>
+        </div>
+        <button type="button" class="button button-secondary" data-open-catalog>
+          + Ajouter
+        </button>
+      </div>
+      <div id="catalog-list" class="catalog-list"></div>
+    </section>
+  </main>
+
+  <dialog id="catalog-dialog" class="dialog">
+    <form id="catalog-form" method="dialog" class="dialog-card">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Catalogue</p>
+          <h2>Créer un élément</h2>
+        </div>
+        <button type="button" class="icon-button" data-close-catalog aria-label="Fermer">×</button>
+      </div>
+
+      <label class="field">
+        <span>Nom</span>
+        <input id="catalog-label" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Coude droit" required>
+      </label>
+
+      <label class="field">
+        <span>Famille</span>
+        <select id="catalog-family" required>
+          <option value="rhumatologie">Rhumatologie</option>
+          <option value="digestif">Digestif</option>
+          <option value="neurologique">Neurologique</option>
+          <option value="general">Général</option>
+          <option value="autre">Autre</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Type</span>
+        <select id="catalog-kind" required>
+          <option value="zone">Zone</option>
+          <option value="symptome">Symptôme</option>
+          <option value="evenement">Événement</option>
+        </select>
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="button button-secondary" data-close-catalog>Annuler</button>
+        <button type="submit" class="button button-primary">Créer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+  <script type="module" src="./src/app.js?v=4.0.0-1"></script>
+</body>
+</html>
