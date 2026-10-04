@@ -1,6 +1,7 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem } from './catalog.js';
 import { createEntry, deleteEntry } from './entries.js';
+import { downloadExport, importFromJsonText } from './import-export.js';
 import {
   closeCatalogDialog,
   getCatalogFormInput,
@@ -10,6 +11,7 @@ import {
   renderAll,
   resetEntryForm,
   setDefaultDateTime,
+  showImportSummary,
   showToast,
   toggleLevelButton
 } from './ui.js';
@@ -69,6 +71,47 @@ function handleDeleteEntry(entryId) {
   }
 }
 
+function handleExport() {
+  try {
+    downloadExport(data);
+    showToast('Sauvegarde exportée.');
+  } catch (error) {
+    console.error('Export impossible.', error);
+    showToast('Impossible d’exporter la sauvegarde.', 'error');
+  }
+}
+
+async function handleImportFile(event) {
+  const [file] = event.target.files || [];
+
+  // Réinitialise immédiatement le champ : le même fichier pourra être choisi
+  // une seconde fois pour vérifier l'idempotence de l'import.
+  event.target.value = '';
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const result = importFromJsonText(data, text);
+
+    // La sauvegarde n'a lieu qu'après validation et conversion complètes.
+    persistAndRender();
+    showImportSummary(result);
+
+    if (result.warnings?.length) {
+      console.warn('Import terminé avec avertissements :', result.warnings);
+      showToast('Import terminé avec avertissements.');
+    } else {
+      showToast('Import terminé.');
+    }
+  } catch (error) {
+    console.error('Import impossible.', error);
+    showToast(error.message || 'Impossible d’importer ce fichier.', 'error');
+  }
+}
+
 function registerEvents() {
   document.querySelectorAll('[data-open-catalog]').forEach(button => {
     button.addEventListener('click', openCatalogDialog);
@@ -98,6 +141,10 @@ function registerEvents() {
       closeCatalogDialog();
     }
   });
+
+  elements.exportData.addEventListener('click', handleExport);
+  elements.chooseImportFile.addEventListener('click', () => elements.importFile.click());
+  elements.importFile.addEventListener('change', handleImportFile);
 }
 
 function registerServiceWorker() {
