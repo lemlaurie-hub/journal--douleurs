@@ -34,9 +34,9 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 
 ## V4 — prochaines étapes
 
-- [ ] Import/export sécurisé de l'historique V3 vers V4 (code préparé sur `feature/import-export-v3-v4` ; validation dans la V4 installée à faire avant publication).
-- [ ] Vérification d'idempotence de l'import et détection des doublons.
-- [ ] Contrôle du nombre d'entrées, dates, heures et notes après import.
+- [x] Import/export sécurisé de l'historique V3 vers V4 (publié ; fusion additive, sans effacement automatique).
+- [x] Idempotence et détection des doublons vérifiées par tests automatisés et simulation avec le JSON V3 fourni.
+- [ ] Vérifier dans la V4 installée sur le téléphone le nombre d'entrées, les dates/heures et les notes après import réel.
 - [ ] Refonte ergonomique mobile après validation de l'import.
 - [ ] Navigation claire par pages/modules.
 - [ ] Page Rhumato.
