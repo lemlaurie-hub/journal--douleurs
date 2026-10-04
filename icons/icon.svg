@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Journal santé">
+  <rect width="512" height="512" rx="112" fill="#315f74"/>
+  <path d="M150 104h212a46 46 0 0 1 46 46v212a46 46 0 0 1-46 46H150a46 46 0 0 1-46-46V150a46 46 0 0 1 46-46Z" fill="#fff"/>
+  <path d="M256 166v180M166 256h180" stroke="#315f74" stroke-width="44" stroke-linecap="round"/>
+</svg>
