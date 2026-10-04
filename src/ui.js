@@ -20,6 +20,10 @@ const elements = {
   catalogLabel: document.querySelector('#catalog-label'),
   catalogFamily: document.querySelector('#catalog-family'),
   catalogKind: document.querySelector('#catalog-kind'),
+  exportData: document.querySelector('#export-data'),
+  chooseImportFile: document.querySelector('#choose-import-file'),
+  importFile: document.querySelector('#import-file'),
+  importSummary: document.querySelector('#import-summary'),
   toast: document.querySelector('#toast')
 };
 
@@ -108,6 +112,22 @@ export function showToast(message, type = 'info') {
   showToast.timeoutId = window.setTimeout(() => {
     elements.toast.hidden = true;
   }, 3200);
+}
+
+export function showImportSummary(result) {
+  const sourceLabel = result.source === 'v3' ? 'V3' : 'V4';
+  const parts = [
+    `Import ${sourceLabel} terminé : ${result.addedEntries} observation(s) ajoutée(s)`,
+    `${result.skippedEntries} déjà présente(s) ou ignorée(s)`,
+    `${result.addedCatalogItems} élément(s) de suivi ajouté(s)`
+  ];
+
+  if (result.warnings?.length) {
+    parts.push(`${result.warnings.length} avertissement(s)`);
+  }
+
+  elements.importSummary.textContent = `${parts.join(' · ')}.`;
+  elements.importSummary.hidden = false;
 }
 
 export function renderCatalog(data) {
@@ -262,7 +282,9 @@ export function renderHistory(data) {
 
     const level = document.createElement('p');
     level.className = 'history-level';
-    level.textContent = formatLevelRange(entry.levels);
+    level.textContent = entry.levels?.length
+      ? formatLevelRange(entry.levels)
+      : entry.legacy?.levelLabel || 'Niveau non renseigné';
 
     article.append(header, level);
 
