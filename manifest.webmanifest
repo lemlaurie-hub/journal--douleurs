@@ -1,0 +1,19 @@
+{
+  "name": "Journal de suivi santé",
+  "short_name": "Journal santé",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#edf3f5",
+  "theme_color": "#315f74",
+  "lang": "fr",
+  "description": "Journal personnel de suivi santé, utilisable hors ligne.",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
