@@ -15,7 +15,7 @@ V4 d'une application PWA mobile-first de suivi personnel de santé.
 - historique défilable ;
 - fonctionnement hors ligne via service worker.
 
-La V4 démarre volontairement avec un stockage séparé et vide. L'import de l'historique V3 sera développé séparément afin de ne pas risquer d'altérer les anciennes données.
+La V4 démarre volontairement avec un stockage séparé de la V3. Le module Importer / exporter permet d’ajouter un historique V3 ou une sauvegarde V4 sans effacer les données déjà présentes.
 
 ## Architecture
 

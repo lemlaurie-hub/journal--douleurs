@@ -154,6 +154,10 @@ Maintenir ce fichier à jour avec :
 
 Éviter d'y conserver des informations devenues fausses, notamment des numéros de version ou des états de déploiement anciens.
 
+## Tests du module de transfert
+
+Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il couvre les exports/imports V4, les deux formes d'entrées V3 (`zones` et `zone`), la conservation des dates/heures et notes, les doublons, les collisions d'identifiants et le refus atomique des fichiers invalides. Les données personnelles ne doivent jamais être ajoutées aux fixtures du dépôt.
+
 ## 10. Publication GitHub
 
 Ne pas utiliser `git push` si l'environnement ne possède pas d'identifiants Git. Ne demander à Laurie ni jeton, ni mot de passe, ni clé SSH.
@@ -209,6 +213,7 @@ La V4 est une PWA mobile-first avec données locales. Elle démarre volontaireme
 - `src/catalog.js` : création et gestion des éléments de suivi.
 - `src/entries.js` : création/suppression des observations.
 - `src/stats.js` : calculs statistiques communs.
+- `src/transfer.js` : validation, export JSON V4, import JSON V4/V3 et fusion non destructive.
 - `src/ui.js` : rendu de l'interface et orchestration des interactions.
 - `src/app.js` : point d'entrée de l'application.
 - `manifest.webmanifest` : métadonnées d'installation PWA.

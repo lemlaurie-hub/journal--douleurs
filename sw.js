@@ -1,17 +1,18 @@
 // Service worker V4. Incrémenter CACHE_NAME à chaque publication qui change le comportement.
-const CACHE_NAME = 'journal-sante-v4-2026-10-04-1';
+const CACHE_NAME = 'journal-sante-v4-2026-10-04-2';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=4.0.0-1',
+  './styles.css?v=4.0.0-2',
   './manifest.webmanifest',
   './icons/icon.svg',
-  './src/app.js?v=4.0.0-1',
+  './src/app.js?v=4.0.0-2',
   './src/storage.js',
   './src/catalog.js',
   './src/entries.js',
   './src/stats.js',
-  './src/ui.js'
+  './src/ui.js',
+  './src/transfer.js'
 ];
 
 self.addEventListener('install', event => {
@@ -33,21 +34,14 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') {
-    return;
-  }
+  if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then(cached => {
-      if (cached) {
-        return cached;
-      }
+      if (cached) return cached;
 
       return fetch(event.request).then(response => {
-        if (!response || response.status !== 200 || response.type === 'opaque') {
-          return response;
-        }
-
+        if (!response || response.status !== 200 || response.type === 'opaque') return response;
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
