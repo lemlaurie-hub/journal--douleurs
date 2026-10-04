@@ -97,6 +97,7 @@ function importV3Entries(data, legacyEntries) {
   let skippedEntries = 0;
   let addedCatalogItems = 0;
   const warnings = [];
+  const occurrences = new Map();
 
   for (let index = 0; index < legacyEntries.length; index += 1) {
     const rawEntry = legacyEntries[index];
@@ -118,10 +119,13 @@ function importV3Entries(data, legacyEntries) {
     addedCatalogItems += data.catalog.length - beforeCatalogCount;
 
     const fingerprint = getV3Fingerprint(rawEntry, zones);
-    const entryId = `entry-v3-${stableHash(fingerprint)}`;
+    const occurrence = (occurrences.get(fingerprint) || 0) + 1;
+    occurrences.set(fingerprint, occurrence);
 
-    // L'identifiant dérivé du contenu rend l'import idempotent : réimporter
-    // exactement la même V3 ne crée pas une deuxième copie de l'entrée.
+    // Le numéro d'occurrence préserve deux véritables entrées V3 identiques,
+    // tout en donnant les mêmes identifiants si le même fichier est réimporté.
+    const entryId = `entry-v3-${stableHash(fingerprint)}-${occurrence}`;
+
     if (data.entries.some(entry => entry.id === entryId)) {
       skippedEntries += 1;
       continue;
