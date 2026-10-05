@@ -37,6 +37,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 - [x] Import/export sécurisé de l'historique V3 vers V4 (publié ; fusion additive, sans effacement automatique).
 - [x] Idempotence et détection des doublons vérifiées par tests automatisés et simulation avec le JSON V3 fourni.
 - [ ] Vérifier dans la V4 installée sur le téléphone le nombre d'entrées, les dates/heures et les notes après import réel.
+- [ ] Outils de correction post-import : modifier les éléments associés à une observation et la classification d’un élément du catalogue, en préservant dates, heures et notes ; ne pas appliquer de reclassement groupé ambigu.
 - [ ] Refonte ergonomique mobile après validation de l'import.
 - [ ] Navigation claire par pages/modules.
 - [ ] Page Rhumato.
