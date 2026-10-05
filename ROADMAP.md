@@ -43,6 +43,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 - [ ] Page Digestif.
 - [ ] Page Symptômes / événements.
 - [ ] Page Mesures.
+  - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
 - [ ] Ajout/modification d'une zone depuis n'importe quel écran via une logique unique.
 - [ ] Ajout/modification d'un symptôme/événement via une logique unique.
 - [ ] Suivi de durée / statut « encore maintenant ».
