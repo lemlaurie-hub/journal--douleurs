@@ -10,7 +10,7 @@ L'interface pourra être découpée en pages/modules plutôt qu'en un écran uni
 
 ### Organisation envisagée
 
-- **Accueil** : résumé du jour, raccourcis de saisie, dernières observations.
+- **Accueil** : résumé du jour, raccourcis de saisie, dernières observations, avec une navigation visuelle par galets cliquables vers les pages/modules.
 - **Rhumato** : douleurs, zones corporelles, intensité/gêne, durée et éléments associés.
 - **Digestif** : symptômes digestifs et observations associées.
 - **Symptômes / événements** : événements transversaux qui ne sont pas uniquement des douleurs (par exemple migraine, fourmillements, crampes, vertige, malaise, fatigue intense).
