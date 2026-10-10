@@ -1,16 +1,21 @@
 import { loadData, saveData } from './storage.js';
-import { createCatalogItem } from './catalog.js';
-import { createEntry, deleteEntry } from './entries.js';
+import { createCatalogItem, updateCatalogItem } from './catalog.js';
+import { createEntry, deleteEntry, updateEntry } from './entries.js';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
+  beginEntryEdit,
   getCatalogFormInput,
+  getEditingCatalogId,
+  getEditingEntryId,
   getElements,
   getEntryFormInput,
+  isEntryFormDirty,
   openCatalogDialog,
   renderAll,
   resetEntryForm,
   setDefaultDateTime,
+  setActivePage,
   showToast,
   toggleLevelButton
 } from './ui.js';
@@ -20,61 +25,23 @@ import {
 
 const data = loadData();
 const elements = getElements();
-
-function addTransferControls() {
-  const panel = document.createElement('section');
-  panel.className = 'panel';
-  panel.setAttribute('aria-labelledby', 'backup-title');
-
-  const heading = document.createElement('div');
-  heading.className = 'section-heading';
-  const titleGroup = document.createElement('div');
-  const eyebrow = document.createElement('p');
-  eyebrow.className = 'eyebrow';
-  eyebrow.textContent = 'Sauvegarde';
-  const title = document.createElement('h2');
-  title.id = 'backup-title';
-  title.textContent = 'Importer / exporter';
-  titleGroup.append(eyebrow, title);
-  heading.append(titleGroup);
-
-  const explanation = document.createElement('p');
-  explanation.className = 'field-help';
-  explanation.textContent = 'Télécharge une copie JSON ou ajoute les données d’une sauvegarde sans remplacer celles de cet appareil.';
-
-  const exportButton = document.createElement('button');
-  exportButton.type = 'button';
-  exportButton.id = 'export-backup';
-  exportButton.className = 'button button-secondary';
-  exportButton.textContent = 'Télécharger la sauvegarde JSON';
-
-  const importLabel = document.createElement('label');
-  importLabel.className = 'field';
-  const importText = document.createElement('span');
-  importText.textContent = 'Ajouter depuis un fichier JSON';
-  const importInput = document.createElement('input');
-  importInput.id = 'import-backup';
-  importInput.type = 'file';
-  importInput.accept = '.json,application/json';
-  importLabel.append(importText, importInput);
-
-  panel.append(heading, explanation, exportButton, importLabel);
-  elements.history.closest('.panel').after(panel);
-}
+let currentModule = 'rhumatologie';
 
 function persistAndRender() {
   saveData(data);
-  renderAll(data);
+  renderAll(data, currentModule);
 }
 
 function handleCatalogSubmit(event) {
   event.preventDefault();
 
   try {
-    createCatalogItem(data, getCatalogFormInput());
+    const catalogId = getEditingCatalogId();
+    if (catalogId) updateCatalogItem(data, catalogId, getCatalogFormInput());
+    else createCatalogItem(data, getCatalogFormInput());
     persistAndRender();
     closeCatalogDialog();
-    showToast('Élément ajouté.');
+    showToast(catalogId ? 'Élément modifié.' : 'Élément ajouté.');
   } catch (error) {
     showToast(error.message, 'error');
   }
@@ -84,10 +51,12 @@ function handleEntrySubmit(event) {
   event.preventDefault();
 
   try {
-    createEntry(data, getEntryFormInput());
-    persistAndRender();
+    const entryId = getEditingEntryId();
+    if (entryId) updateEntry(data, entryId, getEntryFormInput());
+    else createEntry(data, getEntryFormInput());
     resetEntryForm();
-    showToast('Observation enregistrée.');
+    persistAndRender();
+    showToast(entryId ? 'Observation corrigée.' : 'Observation enregistrée.');
   } catch (error) {
     showToast(error.message, 'error');
   }
@@ -102,6 +71,7 @@ function handleDeleteEntry(entryId) {
   if (!confirmed) return;
 
   if (deleteEntry(data, entryId)) {
+    if (getEditingEntryId() === entryId) resetEntryForm();
     persistAndRender();
     showToast('Observation supprimée.');
   }
@@ -152,11 +122,30 @@ async function handleImport(event) {
 }
 
 function registerEvents() {
-  document.querySelectorAll('[data-open-catalog]').forEach(button => {
-    button.addEventListener('click', openCatalogDialog);
+  document.querySelectorAll('[data-open-module]').forEach(button => {
+    button.addEventListener('click', () => {
+      currentModule = button.dataset.openModule;
+      resetEntryForm();
+      setActivePage('module', currentModule);
+      renderAll(data, currentModule);
+    });
   });
 
-  document.querySelector('[data-close-catalog]').addEventListener('click', closeCatalogDialog);
+  document.querySelectorAll('[data-go-home]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (isEntryFormDirty() && !window.confirm('Quitter sans enregistrer cette observation ?')) return;
+      resetEntryForm();
+      setActivePage('home');
+    });
+  });
+
+  document.querySelectorAll('[data-open-catalog]').forEach(button => {
+    button.addEventListener('click', () => openCatalogDialog({ family: currentModule }));
+  });
+
+  document.querySelectorAll('[data-close-catalog]').forEach(button => {
+    button.addEventListener('click', closeCatalogDialog);
+  });
   elements.catalogForm.addEventListener('submit', handleCatalogSubmit);
   elements.entryForm.addEventListener('submit', handleEntrySubmit);
   document.querySelector('#export-backup').addEventListener('click', handleExport);
@@ -167,9 +156,27 @@ function registerEvents() {
     if (button) toggleLevelButton(button);
   });
 
-  elements.history.addEventListener('click', event => {
-    const button = event.target.closest('[data-delete-entry]');
-    if (button) handleDeleteEntry(button.dataset.deleteEntry);
+  elements.moduleHistory.addEventListener('click', event => {
+    const editButton = event.target.closest('[data-edit-entry]');
+    if (editButton) {
+      const entry = data.entries.find(row => row.id === editButton.dataset.editEntry);
+      if (entry) beginEntryEdit(entry, data, currentModule);
+      return;
+    }
+    const deleteButton = event.target.closest('[data-delete-entry]');
+    if (deleteButton) handleDeleteEntry(deleteButton.dataset.deleteEntry);
+  });
+
+  elements.catalogList.addEventListener('click', event => {
+    const button = event.target.closest('[data-edit-catalog]');
+    if (!button) return;
+    const item = data.catalog.find(row => row.id === button.dataset.editCatalog);
+    if (item) openCatalogDialog({ item });
+  });
+
+  elements.cancelEdit.addEventListener('click', () => {
+    resetEntryForm();
+    renderAll(data, currentModule);
   });
 
   elements.catalogDialog.addEventListener('click', event => {
@@ -189,7 +196,11 @@ function registerServiceWorker() {
 }
 
 setDefaultDateTime();
-renderAll(data);
-addTransferControls();
+const initialModule = location.hash.slice(1);
+if (['rhumatologie', 'digestif', 'symptomes-evenements'].includes(initialModule)) {
+  currentModule = initialModule;
+  setActivePage('module', currentModule);
+}
+renderAll(data, currentModule);
 registerEvents();
 registerServiceWorker();

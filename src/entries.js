@@ -26,19 +26,9 @@ function normalizeLevels(levels) {
 }
 
 export function createEntry(data, input) {
-  const itemIds = [...new Set(input.itemIds || [])]
-    .filter(id => data.catalog.some(item => item.id === id));
-
-  if (itemIds.length === 0) {
-    throw new Error('Choisis au moins un élément de suivi.');
-  }
-
+  const itemIds = validateItemIds(data, input.itemIds);
   const levels = normalizeLevels(input.levels);
-  const occurredAt = new Date(input.occurredAt);
-
-  if (Number.isNaN(occurredAt.getTime())) {
-    throw new Error('La date ou l’heure n’est pas valide.');
-  }
+  const occurredAt = normalizeOccurredAt(input.occurredAt);
 
   const entry = {
     id: createId('entry'),
@@ -51,6 +41,52 @@ export function createEntry(data, input) {
   };
 
   data.entries.unshift(entry);
+  return entry;
+}
+
+function validateItemIds(data, itemIdsInput) {
+  const itemIds = [...new Set(itemIdsInput || [])]
+    .filter(id => data.catalog.some(item => item.id === id));
+  if (itemIds.length === 0) throw new Error('Choisis au moins un élément de suivi.');
+  return itemIds;
+}
+
+function normalizeOccurredAt(value) {
+  const occurredAt = new Date(value);
+  if (Number.isNaN(occurredAt.getTime())) {
+    throw new Error('La date ou l’heure n’est pas valide.');
+  }
+  return occurredAt.toISOString();
+}
+
+/** Modifie une observation sans recréer son identité ni sa date de création. */
+export function updateEntry(data, entryId, input) {
+  const entry = data.entries.find(candidate => candidate.id === entryId);
+  if (!entry) throw new Error('Cette observation n’existe plus.');
+
+  const submittedItemIds = validateItemIds(data, input.itemIds);
+  const sameItemSet = submittedItemIds.length === (entry.itemIds || []).length
+    && submittedItemIds.every(id => entry.itemIds.includes(id));
+  const itemIds = sameItemSet ? [...entry.itemIds] : submittedItemIds;
+  const submittedLevels = normalizeLevels(input.levels);
+  const sameLevels = JSON.stringify(submittedLevels) === JSON.stringify(entry.levels || []);
+  const levels = sameLevels ? [...entry.levels] : submittedLevels;
+  const occurredAt = normalizeOccurredAt(input.occurredAt);
+  const submittedNote = String(input.note ?? '');
+
+  // Une reclassification ne doit pas altérer les secondes/millisecondes ni
+  // les espaces d'une note ancienne si l'utilisatrice ne les a pas modifiés.
+  const note = submittedNote === String(entry.note ?? '')
+    ? String(entry.note ?? '')
+    : submittedNote.trim();
+
+  Object.assign(entry, {
+    itemIds,
+    levels,
+    occurredAt: occurredAt === entry.occurredAt ? entry.occurredAt : occurredAt,
+    ongoing: Boolean(input.ongoing),
+    note
+  });
   return entry;
 }
 
@@ -79,3 +115,4 @@ export function getLevelLabel(level) {
 export function formatLevelRange(levels) {
   return (levels || []).map(getLevelLabel).join(' → ');
 }
+

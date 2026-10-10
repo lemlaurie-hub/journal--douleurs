@@ -103,6 +103,10 @@ test('importe le format V3 réel en conservant dates, niveaux, notes et événem
   assert.equal(first.catalogAdded, 2);
   assert.equal(first.entriesAdded, 2);
   assert.equal(first.data.entries.length, 2);
+  assert.deepEqual(first.data.catalog.map(item => [item.label, item.family, item.kind]), [
+    ['Migraine', 'symptomes-evenements', 'symptome'],
+    ['Œil droit', 'rhumatologie', 'zone']
+  ]);
   assert.deepEqual(first.data.entries[0], {
     id: first.data.entries[0].id,
     itemIds: first.data.catalog.map(item => item.id),

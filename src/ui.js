@@ -2,26 +2,61 @@ import { getFamilyLabel, getKindLabel } from './catalog.js';
 import { formatLevelRange } from './entries.js';
 import { calculateStats } from './stats.js';
 
-// Ce fichier ne contient pas de règles métier : il affiche les données
-// et lit les champs de formulaire. Les validations restent dans les modules métier.
-
+// Cette couche ne contient pas de règles métier : elle prépare les champs et
+// affiche les données. Le même formulaire sert à tous les modules et éditions.
 const elements = {
+  homePage: document.querySelector('#home-page'),
+  modulePage: document.querySelector('#module-page'),
+  moduleTitle: document.querySelector('#module-title'),
+  moduleDescription: document.querySelector('#module-description'),
+  homeStats: document.querySelector('#home-stats'),
+  homeHistory: document.querySelector('#home-history'),
+  moduleStats: document.querySelector('#module-stats'),
   entryForm: document.querySelector('#entry-form'),
   itemChoices: document.querySelector('#item-choices'),
   levels: document.querySelector('#levels'),
   occurredAt: document.querySelector('#occurred-at'),
   ongoing: document.querySelector('#ongoing'),
   note: document.querySelector('#note'),
+  saveEntry: document.querySelector('#save-entry'),
+  cancelEdit: document.querySelector('#cancel-edit'),
   catalogList: document.querySelector('#catalog-list'),
-  stats: document.querySelector('#stats'),
-  history: document.querySelector('#history'),
+  moduleHistory: document.querySelector('#module-history'),
   catalogDialog: document.querySelector('#catalog-dialog'),
   catalogForm: document.querySelector('#catalog-form'),
+  catalogDialogTitle: document.querySelector('#catalog-dialog-title'),
   catalogLabel: document.querySelector('#catalog-label'),
   catalogFamily: document.querySelector('#catalog-family'),
   catalogKind: document.querySelector('#catalog-kind'),
+  saveCatalogItem: document.querySelector('#save-catalog-item'),
   toast: document.querySelector('#toast')
 };
+
+const MODULES = {
+  rhumatologie: {
+    title: 'Rhumato',
+    description: 'Douleurs et observations rhumatologiques.',
+    icon: '🦴',
+    families: ['rhumatologie']
+  },
+  digestif: {
+    title: 'Digestif',
+    description: 'Symptômes et événements digestifs.',
+    icon: '🌿',
+    families: ['digestif']
+  },
+  'symptomes-evenements': {
+    title: 'Symptômes / événements',
+    description: 'Observations qui ne sont pas propres à un seul autre module.',
+    icon: '🌀',
+    families: ['symptomes-evenements', 'neurologique', 'general', 'autre']
+  }
+};
+
+let editingEntry = null;
+let originalDateTimeFieldValue = null;
+let editingCatalogId = null;
+let defaultDateTimeFieldValue = null;
 
 function createEmptyMessage(text) {
   const p = document.createElement('p');
@@ -32,48 +67,128 @@ function createEmptyMessage(text) {
 
 function formatLocalDateTime(isoDate) {
   const date = new Date(isoDate);
-  return new Intl.DateTimeFormat('fr-FR', {
-    dateStyle: 'medium',
-    timeStyle: 'short'
-  }).format(date);
+  if (Number.isNaN(date.getTime())) return 'Date non reconnue';
+  return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function toLocalInputValue(isoDate) {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function isItemInModule(item, moduleId) {
+  return MODULES[moduleId]?.families.includes(item.family) || false;
+}
+
+function filteredData(data, moduleId) {
+  const catalog = data.catalog.filter(item => isItemInModule(item, moduleId));
+  const ids = new Set(catalog.map(item => item.id));
+  const entries = data.entries.filter(entry => (entry.itemIds || []).some(id => ids.has(id)));
+  return { ...data, catalog, entries };
 }
 
 export function getElements() {
   return elements;
 }
 
-export function setDefaultDateTime() {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
+export function setActivePage(page, moduleId = null) {
+  elements.homePage.hidden = page !== 'home';
+  elements.modulePage.hidden = page !== 'module';
+  if (page !== 'module' || !MODULES[moduleId]) {
+    document.title = 'Journal de suivi santé';
+    history.replaceState(null, '', location.pathname + location.search);
+    return;
+  }
 
-  elements.occurredAt.value = local;
+  const module = MODULES[moduleId];
+  elements.moduleTitle.textContent = module.title;
+  elements.moduleDescription.textContent = module.description;
+  document.title = `${module.title} · Journal de suivi santé`;
+  history.replaceState(null, '', `#${moduleId}`);
+}
+
+export function setDefaultDateTime() {
+  defaultDateTimeFieldValue = toLocalInputValue(new Date().toISOString());
+  elements.occurredAt.value = defaultDateTimeFieldValue;
+}
+
+export function isEntryFormDirty() {
+  const itemIds = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value);
+  const levels = [...elements.levels.querySelectorAll('.level-button.is-selected')].map(button => Number(button.dataset.level));
+  const note = elements.note.value;
+  const occurredAt = elements.occurredAt.value;
+
+  if (!editingEntry) {
+    return itemIds.length > 0 || levels.length > 0 || elements.ongoing.checked
+      || note.length > 0 || occurredAt !== defaultDateTimeFieldValue;
+  }
+
+  return JSON.stringify([...itemIds].sort()) !== JSON.stringify([...(editingEntry.itemIds || [])].sort())
+    || JSON.stringify(levels) !== JSON.stringify(editingEntry.levels || [])
+    || occurredAt !== originalDateTimeFieldValue
+    || elements.ongoing.checked !== Boolean(editingEntry.ongoing)
+    || note !== String(editingEntry.note ?? '');
 }
 
 export function getEntryFormInput() {
   const itemIds = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
     .map(input => input.value);
-
   const levels = [...elements.levels.querySelectorAll('.level-button.is-selected')]
     .map(button => Number(button.dataset.level));
+
+  const occurredAt = editingEntry && elements.occurredAt.value === originalDateTimeFieldValue
+    ? editingEntry.occurredAt
+    : elements.occurredAt.value;
 
   return {
     itemIds,
     levels,
-    occurredAt: elements.occurredAt.value,
+    occurredAt,
     ongoing: elements.ongoing.checked,
     note: elements.note.value
   };
 }
 
+export function getEditingEntryId() {
+  return editingEntry?.id || null;
+}
+
 export function resetEntryForm() {
+  editingEntry = null;
+  originalDateTimeFieldValue = null;
   elements.entryForm.reset();
   elements.levels.querySelectorAll('.level-button').forEach(button => {
     button.classList.remove('is-selected');
     button.setAttribute('aria-pressed', 'false');
   });
+  elements.saveEntry.textContent = 'Enregistrer';
+  elements.cancelEdit.hidden = true;
+  elements.entryForm.closest('.panel').querySelector('h2').textContent = 'Nouvelle observation';
   setDefaultDateTime();
+}
+
+export function beginEntryEdit(entry, data, moduleId) {
+  editingEntry = entry;
+  renderItemChoices(data, moduleId, entry.itemIds || []);
+  elements.itemChoices.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = (entry.itemIds || []).includes(input.value);
+  });
+
+  elements.levels.querySelectorAll('.level-button').forEach(button => {
+    const selected = (entry.levels || []).includes(Number(button.dataset.level));
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+
+  originalDateTimeFieldValue = toLocalInputValue(entry.occurredAt);
+  elements.occurredAt.value = originalDateTimeFieldValue;
+  elements.ongoing.checked = Boolean(entry.ongoing);
+  elements.note.value = String(entry.note ?? '');
+  elements.saveEntry.textContent = 'Enregistrer les corrections';
+  elements.cancelEdit.hidden = false;
+  elements.entryForm.closest('.panel').querySelector('h2').textContent = 'Modifier l’observation';
+  elements.entryForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 export function getCatalogFormInput() {
@@ -84,12 +199,23 @@ export function getCatalogFormInput() {
   };
 }
 
-export function openCatalogDialog() {
+export function getEditingCatalogId() {
+  return editingCatalogId;
+}
+
+export function openCatalogDialog({ family = 'rhumatologie', item = null } = {}) {
+  editingCatalogId = item?.id || null;
+  elements.catalogDialogTitle.textContent = item ? 'Modifier un élément' : 'Créer un élément';
+  elements.saveCatalogItem.textContent = item ? 'Enregistrer' : 'Créer';
+  elements.catalogLabel.value = item?.label || '';
+  elements.catalogFamily.value = item?.family || family;
+  elements.catalogKind.value = item?.kind || (family === 'rhumatologie' ? 'zone' : 'symptome');
   elements.catalogDialog.showModal();
   window.setTimeout(() => elements.catalogLabel.focus(), 0);
 }
 
 export function closeCatalogDialog() {
+  editingCatalogId = null;
   elements.catalogForm.reset();
   elements.catalogDialog.close();
 }
@@ -103,94 +229,13 @@ export function showToast(message, type = 'info') {
   elements.toast.textContent = message;
   elements.toast.dataset.type = type;
   elements.toast.hidden = false;
-
   window.clearTimeout(showToast.timeoutId);
-  showToast.timeoutId = window.setTimeout(() => {
-    elements.toast.hidden = true;
-  }, 3200);
+  showToast.timeoutId = window.setTimeout(() => { elements.toast.hidden = true; }, 3200);
 }
 
-export function renderCatalog(data) {
-  elements.catalogList.replaceChildren();
-
-  if (data.catalog.length === 0) {
-    elements.catalogList.append(
-      createEmptyMessage('Aucun élément créé pour l’instant. Ajoute une zone, un symptôme ou un événement pour commencer.')
-    );
-    return;
-  }
-
-  const sorted = [...data.catalog].sort((a, b) =>
-    getFamilyLabel(a.family).localeCompare(getFamilyLabel(b.family), 'fr')
-    || a.label.localeCompare(b.label, 'fr')
-  );
-
-  for (const item of sorted) {
-    const row = document.createElement('div');
-    row.className = 'catalog-row';
-
-    const main = document.createElement('div');
-    const title = document.createElement('strong');
-    title.textContent = item.label;
-
-    const meta = document.createElement('span');
-    meta.className = 'muted';
-    meta.textContent = `${getFamilyLabel(item.family)} · ${getKindLabel(item.kind)}`;
-
-    main.append(title, meta);
-    row.append(main);
-    elements.catalogList.append(row);
-  }
-}
-
-export function renderItemChoices(data) {
-  elements.itemChoices.replaceChildren();
-
-  if (data.catalog.length === 0) {
-    elements.itemChoices.append(
-      createEmptyMessage('Crée d’abord au moins un élément de suivi.')
-    );
-    return;
-  }
-
-  const sorted = [...data.catalog].sort((a, b) =>
-    getFamilyLabel(a.family).localeCompare(getFamilyLabel(b.family), 'fr')
-    || a.label.localeCompare(b.label, 'fr')
-  );
-
-  let currentFamily = null;
-
-  for (const item of sorted) {
-    if (item.family !== currentFamily) {
-      currentFamily = item.family;
-      const heading = document.createElement('h3');
-      heading.className = 'choice-heading';
-      heading.textContent = getFamilyLabel(item.family);
-      elements.itemChoices.append(heading);
-    }
-
-    const label = document.createElement('label');
-    label.className = 'choice-card';
-
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = item.id;
-
-    const text = document.createElement('span');
-    text.textContent = item.label;
-
-    const kind = document.createElement('small');
-    kind.textContent = getKindLabel(item.kind);
-
-    label.append(input, text, kind);
-    elements.itemChoices.append(label);
-  }
-}
-
-export function renderStats(data) {
+function renderStats(data, target) {
   const stats = calculateStats(data);
-  elements.stats.replaceChildren();
-
+  target.replaceChildren();
   const cards = [
     ['Observations', String(stats.totalEntries)],
     ['Jours suivis', String(stats.activeDays)],
@@ -200,15 +245,12 @@ export function renderStats(data) {
   for (const [label, value] of cards) {
     const card = document.createElement('div');
     card.className = 'stat-card';
-
     const strong = document.createElement('strong');
     strong.textContent = value;
-
     const span = document.createElement('span');
     span.textContent = label;
-
     card.append(strong, span);
-    elements.stats.append(card);
+    target.append(card);
   }
 
   const topSection = document.createElement('div');
@@ -216,7 +258,6 @@ export function renderStats(data) {
   const heading = document.createElement('h3');
   heading.textContent = 'Éléments les plus fréquents';
   topSection.append(heading);
-
   if (stats.topItems.length === 0) {
     topSection.append(createEmptyMessage('Les statistiques apparaîtront après les premières observations.'));
   } else {
@@ -228,76 +269,152 @@ export function renderStats(data) {
     }
     topSection.append(list);
   }
-
-  elements.stats.append(topSection);
+  target.append(topSection);
 }
 
-export function renderHistory(data) {
-  elements.history.replaceChildren();
-
-  if (data.entries.length === 0) {
-    elements.history.append(createEmptyMessage('Aucune observation enregistrée.'));
+function renderHistory(data, target, { moduleId = null, limit = Infinity, actions = false } = {}) {
+  target.replaceChildren();
+  const entries = (moduleId ? filteredData(data, moduleId).entries : data.entries)
+    .slice()
+    .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
+  if (entries.length === 0) {
+    target.append(createEmptyMessage(moduleId
+      ? 'Aucune observation dans ce module pour le moment.'
+      : 'Aucune observation enregistrée.'));
     return;
   }
 
-  for (const entry of data.entries) {
+  for (const entry of entries.slice(0, limit)) {
     const article = document.createElement('article');
     article.className = 'history-entry';
-
     const itemNames = (entry.itemIds || [])
       .map(id => data.catalog.find(item => item.id === id)?.label)
       .filter(Boolean);
-
     const header = document.createElement('div');
     header.className = 'history-header';
-
     const title = document.createElement('strong');
     title.textContent = itemNames.length ? itemNames.join(' + ') : 'Élément indisponible';
-
     const date = document.createElement('time');
     date.dateTime = entry.occurredAt;
     date.textContent = formatLocalDateTime(entry.occurredAt);
-
     header.append(title, date);
 
     const level = document.createElement('p');
     level.className = 'history-level';
     level.textContent = formatLevelRange(entry.levels);
-
     article.append(header, level);
-
     if (entry.ongoing) {
       const ongoing = document.createElement('p');
       ongoing.className = 'ongoing-badge';
       ongoing.textContent = 'Encore maintenant';
       article.append(ongoing);
     }
-
     if (entry.note) {
       const note = document.createElement('p');
       note.className = 'history-note';
       note.textContent = entry.note;
       article.append(note);
     }
-
-    const actions = document.createElement('div');
-    actions.className = 'history-actions';
-
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'button button-danger button-small';
-    deleteButton.dataset.deleteEntry = entry.id;
-    deleteButton.textContent = 'Supprimer';
-
-    actions.append(deleteButton);
-    article.append(actions);
-    elements.history.append(article);
+    if (actions) {
+      const controls = document.createElement('div');
+      controls.className = 'history-actions';
+      const editButton = document.createElement('button');
+      editButton.type = 'button';
+      editButton.className = 'button button-secondary button-small';
+      editButton.dataset.editEntry = entry.id;
+      editButton.textContent = 'Modifier';
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'button button-danger button-small';
+      deleteButton.dataset.deleteEntry = entry.id;
+      deleteButton.textContent = 'Supprimer';
+      controls.append(editButton, deleteButton);
+      article.append(controls);
+    }
+    target.append(article);
   }
 }
 
-export function renderAll(data) {
-  renderCatalog(data);
-  renderItemChoices(data);
-  renderStats(data);
-  renderHistory(data);
+function renderCatalog(data, moduleId) {
+  elements.catalogList.replaceChildren();
+  const items = data.catalog
+    .filter(item => isItemInModule(item, moduleId))
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr'));
+  if (items.length === 0) {
+    elements.catalogList.append(createEmptyMessage('Aucun élément dans ce module. Tu peux en créer un.'));
+    return;
+  }
+
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'catalog-row';
+    const main = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = item.label;
+    const meta = document.createElement('span');
+    meta.className = 'muted';
+    meta.textContent = `${getFamilyLabel(item.family)} · ${getKindLabel(item.kind)}`;
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'button button-secondary button-small';
+    editButton.dataset.editCatalog = item.id;
+    editButton.textContent = 'Modifier';
+    main.append(title, meta);
+    row.append(main, editButton);
+    elements.catalogList.append(row);
+  }
+}
+
+function renderItemChoices(data, moduleId, includeIds = []) {
+  elements.itemChoices.replaceChildren();
+  const included = new Set(includeIds);
+  const items = data.catalog.filter(item => isItemInModule(item, moduleId) || included.has(item.id));
+  if (items.length === 0) {
+    elements.itemChoices.append(createEmptyMessage('Aucun élément dans ce module. Crée-en un pour commencer.'));
+    return;
+  }
+
+  const sorted = [...items].sort((a, b) =>
+    getFamilyLabel(a.family).localeCompare(getFamilyLabel(b.family), 'fr')
+    || a.label.localeCompare(b.label, 'fr')
+  );
+  let currentFamily = null;
+  for (const item of sorted) {
+    if (item.family !== currentFamily) {
+      currentFamily = item.family;
+      const heading = document.createElement('h3');
+      heading.className = 'choice-heading';
+      heading.textContent = getFamilyLabel(item.family);
+      elements.itemChoices.append(heading);
+    }
+    const label = document.createElement('label');
+    label.className = 'choice-card';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = item.id;
+    input.checked = included.has(item.id);
+    const text = document.createElement('span');
+    text.textContent = item.label;
+    const kind = document.createElement('small');
+    kind.textContent = getKindLabel(item.kind);
+    label.append(input, text, kind);
+    elements.itemChoices.append(label);
+  }
+}
+
+export function renderAll(data, moduleId) {
+  for (const id of Object.keys(MODULES)) {
+    const count = data.catalog.filter(item => isItemInModule(item, id)).length;
+    const target = document.querySelector(`#count-${id}`);
+    target.textContent = `${count} élément${count > 1 ? 's' : ''}`;
+  }
+  renderStats(data, elements.homeStats);
+  renderHistory(data, elements.homeHistory, { limit: 5 });
+  const selectedBeforeRender = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(input => input.value);
+  const preservedIds = [...new Set([...selectedBeforeRender, ...(editingEntry?.itemIds || [])])];
+  renderItemChoices(data, moduleId, preservedIds);
+  renderStats(filteredData(data, moduleId), elements.moduleStats);
+  renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
+  renderCatalog(data, moduleId);
 }

@@ -37,16 +37,17 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 - [x] Import/export sécurisé de l'historique V3 vers V4 (publié ; fusion additive, sans effacement automatique).
 - [x] Idempotence et détection des doublons vérifiées par tests automatisés et simulation avec le JSON V3 fourni.
 - [ ] Vérifier dans la V4 installée sur le téléphone le nombre d'entrées, les dates/heures et les notes après import réel.
-- [ ] Outils de correction post-import : modifier les éléments associés à une observation et la classification d’un élément du catalogue, en préservant dates, heures et notes ; ne pas appliquer de reclassement groupé ambigu.
+- [x] Outils de correction post-import : modifier les éléments associés à une observation et la classification d’un élément du catalogue, en préservant dates, heures et notes ; ne pas appliquer de reclassement groupé ambigu.
+- [x] Migration ciblée des libellés V3 exacts « Migraine » et « Migraine ophtalmique » vers Symptômes / événements ; les autres entrées restent modifiables individuellement.
 - [ ] Refonte ergonomique mobile après validation de l'import.
-- [ ] Navigation claire par pages/modules.
-- [ ] Page Rhumato.
-- [ ] Page Digestif.
-- [ ] Page Symptômes / événements.
+- [x] Navigation simple par pages/modules (présentation provisoire).
+- [x] Page Rhumato (présentation provisoire).
+- [x] Page Digestif (présentation provisoire).
+- [x] Page Symptômes / événements (présentation provisoire).
 - [ ] Page Mesures.
   - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
-- [ ] Ajout/modification d'une zone depuis n'importe quel écran via une logique unique.
-- [ ] Ajout/modification d'un symptôme/événement via une logique unique.
+- [x] Ajout/modification d'un élément du catalogue via une logique métier unique.
+- [x] Modification d'une observation depuis son module, avec le même formulaire et sans toucher les champs inchangés.
 - [ ] Suivi de durée / statut « encore maintenant ».
 - [ ] Historique filtrable et plus compact.
 - [ ] Statistiques améliorées par période et catégorie.
