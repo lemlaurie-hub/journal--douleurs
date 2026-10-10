@@ -1,3 +1,5 @@
+import { reclassifyKnownV3Items } from './catalog.js';
+
 // Couche de stockage unique de la V4.
 // Toute lecture/écriture des données locales passe par ce fichier.
 
@@ -32,7 +34,7 @@ export function loadData() {
       return createEmptyData();
     }
 
-    return {
+    const data = {
       schemaVersion: SCHEMA_VERSION,
       catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
@@ -40,6 +42,19 @@ export function loadData() {
         ? parsed.settings
         : { theme: 'system' }
     };
+
+    // Correction additive et idempotente : les migraines exactes importées de
+    // la V3 deviennent des symptômes. Les observations et leurs dates restent intactes.
+    if (reclassifyKnownV3Items(data) > 0) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (error) {
+        // Le contenu migré reste disponible en mémoire; une erreur de quota ne
+        // doit jamais transformer un historique valide en base vide.
+        console.warn('Classement des migraines appliqué en mémoire uniquement.', error);
+      }
+    }
+    return data;
   } catch (error) {
     console.error('Impossible de lire les données locales.', error);
     return createEmptyData();
@@ -62,3 +77,4 @@ export function saveData(data) {
 export function getStorageKey() {
   return STORAGE_KEY;
 }
+

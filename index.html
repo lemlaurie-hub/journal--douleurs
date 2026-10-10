@@ -8,145 +8,116 @@
   <title>Journal de suivi santé</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.0.0-2">
+  <link rel="stylesheet" href="./styles.css?v=4.1.0">
 </head>
 <body>
   <header class="app-header">
     <div>
-      <p class="eyebrow">V4</p>
+      <p class="eyebrow">Journal personnel</p>
       <h1>Journal de suivi santé</h1>
-      <p class="subtitle">Douleurs, symptômes et événements — données conservées sur cet appareil.</p>
+      <p class="subtitle">Les observations restent enregistrées sur cet appareil.</p>
     </div>
   </header>
 
   <main class="app-shell">
-    <section class="panel" aria-labelledby="new-entry-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Saisie rapide</p>
-          <h2 id="new-entry-title">Nouvelle observation</h2>
+    <section id="home-page" data-page="home" aria-labelledby="home-title">
+      <section class="panel">
+        <p class="eyebrow">Accueil</p>
+        <h2 id="home-title">Quel suivi veux-tu ouvrir ?</h2>
+        <nav class="module-grid" aria-label="Pages de suivi">
+          <button class="module-card" type="button" data-open-module="rhumatologie">
+            <span class="module-icon" aria-hidden="true">🦴</span><span><strong>Rhumato</strong><small id="count-rhumatologie">0 élément</small></span>
+          </button>
+          <button class="module-card" type="button" data-open-module="digestif">
+            <span class="module-icon" aria-hidden="true">🌿</span><span><strong>Digestif</strong><small id="count-digestif">0 élément</small></span>
+          </button>
+          <button class="module-card" type="button" data-open-module="symptomes-evenements">
+            <span class="module-icon" aria-hidden="true">🌀</span><span><strong>Symptômes / événements</strong><small id="count-symptomes-evenements">0 élément</small></span>
+          </button>
+          <button class="module-card is-unavailable" type="button" disabled>
+            <span class="module-icon" aria-hidden="true">📏</span><span><strong>Mesures</strong><small>À préparer plus tard</small></span>
+          </button>
+        </nav>
+      </section>
+
+      <section class="panel" aria-labelledby="home-stats-title">
+        <div class="section-heading"><div><p class="eyebrow">Vue d'ensemble</p><h2 id="home-stats-title">Suivi global</h2></div></div>
+        <div id="home-stats" class="stats-grid"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="recent-title">
+        <div class="section-heading"><div><p class="eyebrow">Toutes catégories</p><h2 id="recent-title">Dernières observations</h2></div></div>
+        <div id="home-history" class="history-list"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="backup-title">
+        <div class="section-heading"><div><p class="eyebrow">Sauvegarde</p><h2 id="backup-title">Importer / exporter</h2></div></div>
+        <p class="field-help">Télécharge une copie JSON ou ajoute les données d’une sauvegarde sans remplacer celles de cet appareil.</p>
+        <button type="button" id="export-backup" class="button button-secondary">Télécharger la sauvegarde JSON</button>
+        <label class="field"><span>Ajouter depuis un fichier JSON</span><input id="import-backup" type="file" accept=".json,application/json"></label>
+      </section>
+    </section>
+
+    <section id="module-page" data-page="module" hidden aria-labelledby="module-title">
+      <div class="module-topbar"><button type="button" class="button button-secondary" data-go-home>← Accueil</button></div>
+      <section class="panel module-intro">
+        <p class="eyebrow">Module de suivi</p>
+        <h2 id="module-title"></h2>
+        <p id="module-description" class="field-help"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="entry-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">Saisie et correction</p><h2 id="entry-title">Nouvelle observation</h2></div>
+          <button type="button" class="button button-secondary" data-open-catalog>+ Créer un élément</button>
         </div>
-        <button type="button" class="button button-secondary" data-open-catalog>
-          + Créer un élément
-        </button>
-      </div>
-
-      <form id="entry-form" novalidate>
-        <fieldset>
-          <legend>Élément(s) concerné(s)</legend>
-          <div id="item-choices" class="choice-list"></div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Niveau de gêne</legend>
-          <p class="field-help">Tu peux choisir un niveau, ou deux niveaux voisins si c'est entre les deux.</p>
-          <div id="levels" class="level-grid">
+        <form id="entry-form" novalidate>
+          <fieldset><legend>Élément(s) concerné(s)</legend><p class="field-help">Pour corriger une ancienne saisie, coche les bons éléments. La date, l’heure et la note restent inchangées si tu ne les modifies pas.</p><div id="item-choices" class="choice-list"></div></fieldset>
+          <fieldset><legend>Niveau de gêne</legend><p class="field-help">Tu peux choisir un niveau, ou deux niveaux voisins si c'est entre les deux.</p><div id="levels" class="level-grid">
             <button type="button" class="level-button" data-level="1" aria-pressed="false">🙂 Supportable</button>
             <button type="button" class="level-button" data-level="2" aria-pressed="false">😕 Gênante</button>
             <button type="button" class="level-button" data-level="3" aria-pressed="false">😣 Limitante</button>
             <button type="button" class="level-button" data-level="4" aria-pressed="false">😭 Invalidante</button>
+          </div></fieldset>
+          <div class="form-grid">
+            <label class="field"><span>Date et heure</span><input id="occurred-at" name="occurred-at" type="datetime-local" required></label>
+            <label class="checkbox-field"><input id="ongoing" name="ongoing" type="checkbox"><span>Encore maintenant</span></label>
           </div>
-        </fieldset>
+          <label class="field"><span>Note <small>(facultative)</small></span><textarea id="note" name="note" rows="4" placeholder="Contexte, sensation, déclencheur éventuel…"></textarea></label>
+          <div class="form-actions"><button type="submit" id="save-entry" class="button button-primary">Enregistrer</button><button type="button" id="cancel-edit" class="button button-secondary" hidden>Annuler la modification</button></div>
+        </form>
+      </section>
 
-        <div class="form-grid">
-          <label class="field">
-            <span>Date et heure</span>
-            <input id="occurred-at" name="occurred-at" type="datetime-local" required>
-          </label>
+      <section class="panel" aria-labelledby="module-stats-title">
+        <div class="section-heading"><div><p class="eyebrow">Vue d'ensemble</p><h2 id="module-stats-title">Statistiques du module</h2></div></div>
+        <div id="module-stats" class="stats-grid"></div>
+      </section>
 
-          <label class="checkbox-field">
-            <input id="ongoing" name="ongoing" type="checkbox">
-            <span>Encore maintenant</span>
-          </label>
-        </div>
+      <section class="panel" aria-labelledby="history-title">
+        <div class="section-heading"><div><p class="eyebrow">Saisies de ce module</p><h2 id="history-title">Historique</h2></div></div>
+        <div id="module-history" class="history-list"></div>
+      </section>
 
-        <label class="field">
-          <span>Note <small>(facultative)</small></span>
-          <textarea id="note" name="note" rows="4" placeholder="Contexte, sensation, déclencheur éventuel…"></textarea>
-        </label>
-
-        <button type="submit" class="button button-primary button-full">Enregistrer</button>
-      </form>
-    </section>
-
-    <section class="panel" aria-labelledby="stats-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Vue d'ensemble</p>
-          <h2 id="stats-title">Statistiques</h2>
-        </div>
-      </div>
-      <div id="stats" class="stats-grid"></div>
-    </section>
-
-    <section class="panel" aria-labelledby="history-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Dernières saisies</p>
-          <h2 id="history-title">Historique</h2>
-        </div>
-      </div>
-      <div id="history" class="history-list"></div>
-    </section>
-
-    <section class="panel" aria-labelledby="catalog-title">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Personnalisation</p>
-          <h2 id="catalog-title">Éléments de suivi</h2>
-        </div>
-        <button type="button" class="button button-secondary" data-open-catalog>
-          + Ajouter
-        </button>
-      </div>
-      <div id="catalog-list" class="catalog-list"></div>
+      <section class="panel" aria-labelledby="catalog-title">
+        <div class="section-heading"><div><p class="eyebrow">Personnalisation</p><h2 id="catalog-title">Éléments de suivi</h2></div></div>
+        <p class="field-help">Modifier la catégorie d’un élément déplace toutes ses observations associées. Pour corriger une seule observation, utilise le bouton « Modifier » dans son historique.</p>
+        <div id="catalog-list" class="catalog-list"></div>
+      </section>
     </section>
   </main>
 
   <dialog id="catalog-dialog" class="dialog">
     <form id="catalog-form" method="dialog" class="dialog-card">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Catalogue</p>
-          <h2>Créer un élément</h2>
-        </div>
-        <button type="button" class="icon-button" data-close-catalog aria-label="Fermer">×</button>
-      </div>
-
-      <label class="field">
-        <span>Nom</span>
-        <input id="catalog-label" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Coude droit" required>
-      </label>
-
-      <label class="field">
-        <span>Famille</span>
-        <select id="catalog-family" required>
-          <option value="rhumatologie">Rhumatologie</option>
-          <option value="digestif">Digestif</option>
-          <option value="neurologique">Neurologique</option>
-          <option value="general">Général</option>
-          <option value="autre">Autre</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>Type</span>
-        <select id="catalog-kind" required>
-          <option value="zone">Zone</option>
-          <option value="symptome">Symptôme</option>
-          <option value="evenement">Événement</option>
-        </select>
-      </label>
-
-      <div class="dialog-actions">
-        <button type="button" class="button button-secondary" data-close-catalog>Annuler</button>
-        <button type="submit" class="button button-primary">Créer</button>
-      </div>
+      <div class="section-heading"><div><p class="eyebrow">Catalogue</p><h2 id="catalog-dialog-title">Créer un élément</h2></div><button type="button" class="icon-button" data-close-catalog aria-label="Fermer">×</button></div>
+      <label class="field"><span>Nom</span><input id="catalog-label" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Lombaires" required></label>
+      <label class="field"><span>Famille</span><select id="catalog-family" required>
+        <option value="rhumatologie">Rhumatologie</option><option value="digestif">Digestif</option><option value="symptomes-evenements">Symptômes / événements</option><option value="neurologique">Neurologique (ancienne catégorie)</option><option value="general">Général</option><option value="autre">Autre</option>
+      </select></label>
+      <label class="field"><span>Type</span><select id="catalog-kind" required><option value="zone">Zone</option><option value="symptome">Symptôme</option><option value="evenement">Événement</option></select></label>
+      <div class="dialog-actions"><button type="button" class="button button-secondary" data-close-catalog>Annuler</button><button type="submit" id="save-catalog-item" class="button button-primary">Créer</button></div>
     </form>
   </dialog>
-
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
-
-  <script type="module" src="./src/app.js?v=4.0.0-2"></script>
+  <script type="module" src="./src/app.js?v=4.1.0"></script>
 </body>
 </html>

@@ -158,6 +158,8 @@ Maintenir ce fichier à jour avec :
 
 Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il couvre les exports/imports V4, les deux formes d'entrées V3 (`zones` et `zone`), la conservation des dates/heures et notes, les doublons, les collisions d'identifiants et le refus atomique des fichiers invalides. Les données personnelles ne doivent jamais être ajoutées aux fixtures du dépôt.
 
+Les tests couvrent également la modification d'une observation sans recréer son identifiant ni changer sa date précise, sa note ou ses métadonnées intactes. Ils vérifient le reclassement ciblé et idempotent des éléments V3 nommés exactement « Migraine » et « Migraine ophtalmique ».
+
 ## 10. Publication GitHub
 
 Ne pas utiliser `git push` si l'environnement ne possède pas d'identifiants Git. Ne demander à Laurie ni jeton, ni mot de passe, ni clé SSH.
@@ -231,3 +233,11 @@ Les données V4 contiennent :
 - `settings` : préférences générales de l'application.
 
 L'import V3 sera conçu séparément et ne devra jamais effacer la source V3.
+
+## Architecture modulaire en cours
+
+- L'accueil ouvre les pages Rhumato, Digestif et Symptômes / événements. Mesures est affiché comme module à préparer ; aucune collecte de mesure n'est encore active.
+- Le même formulaire de saisie est utilisé dans chaque module et pour corriger une observation existante.
+- Le classement d'un élément du catalogue est global : il déplace toutes les observations liées à cet élément. La correction d'une seule observation passe par son éditeur et ne change que les associations cochées et les champs effectivement modifiés.
+- Les éléments V3 d'identifiants `item-v3-*` et de libellés exacts « Migraine » ou « Migraine ophtalmique » sont classés comme symptômes/événements. Cette migration idempotente ne change pas les observations. Les autres anciennes zones restent à corriger au cas par cas.
+- Le modèle de stockage existant est conservé ; ajouter un module ne nécessite pas de convertir l'historique.

@@ -85,11 +85,13 @@ function convertV3Entries(legacyEntries) {
 
     const itemIds = zoneNames.map(label => {
       if (!zonesByName.has(label)) {
+        const isMigraine = ['migraine', 'migraine ophtalmique']
+          .includes(label.trim().toLocaleLowerCase('fr'));
         zonesByName.set(label, {
           id: `item-v3-${hash(label)}`,
           label,
-          family: 'rhumatologie',
-          kind: 'zone'
+          family: isMigraine ? 'symptomes-evenements' : 'rhumatologie',
+          kind: isMigraine ? 'symptome' : 'zone'
         });
       }
       return zonesByName.get(label).id;
