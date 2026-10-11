@@ -1,6 +1,6 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
-import { createEntry, deleteEntry, updateEntry } from './entries.js';
+import { createEntry, deleteEntry, updateEntry } from './entries.js?v=4.1.2';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
