@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { reclassifyKnownV3Items, updateCatalogItem } from '../src/catalog.js';
-import { updateEntry } from '../src/entries.js';
+import { createEntry, updateEntry } from '../src/entries.js';
 import { getStorageKey, loadData } from '../src/storage.js';
 
 test('reclasser un élément conserve son identité et les observations associées', () => {
@@ -20,6 +20,39 @@ test('reclasser un élément conserve son identité et les observations associé
   assert.equal(data.entries[0].itemIds[0], 'migraine');
   assert.equal(data.entries[0].occurredAt, '2026-06-10T08:14:37.421Z');
   assert.equal(data.entries[0].note, '  après le réveil  ');
+});
+
+test('enregistrer une nouvelle observation conserve la date normalisée et la note', () => {
+  const data = {
+    catalog: [{ id: 'lombaires', label: 'Lombaires', family: 'rhumatologie', kind: 'zone' }],
+    entries: []
+  };
+
+  const entry = createEntry(data, {
+    itemIds: ['lombaires'],
+    levels: [2, 3],
+    occurredAt: '2026-10-11T15:31:00.000Z',
+    ongoing: false,
+    note: 'En train d’éplucher des patates'
+  });
+
+  assert.equal(entry.occurredAt, '2026-10-11T15:31:00.000Z');
+  assert.equal(entry.note, 'En train d’éplucher des patates');
+  assert.equal(data.entries[0].id, entry.id);
+  assert.equal(data.entries.length, 1);
+});
+
+test('une nouvelle observation avec une date invalide ne modifie pas l’historique', () => {
+  const existing = { id: 'entry-existing', occurredAt: '2026-10-10T10:00:00.000Z' };
+  const data = {
+    catalog: [{ id: 'lombaires', label: 'Lombaires', family: 'rhumatologie', kind: 'zone' }],
+    entries: [existing]
+  };
+
+  assert.throws(() => createEntry(data, {
+    itemIds: ['lombaires'], levels: [2], occurredAt: 'pas-une-date', note: 'test'
+  }), /date ou l’heure n’est pas valide/i);
+  assert.deepEqual(data.entries, [existing]);
 });
 
 test('corriger une observation conserve sa date précise, sa note et ses autres métadonnées si elles sont inchangées', () => {
