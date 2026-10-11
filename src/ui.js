@@ -88,6 +88,17 @@ function filteredData(data, moduleId) {
   return { ...data, catalog, entries };
 }
 
+function updateAddressBar(hash = '') {
+  const nextUrl = `${location.pathname}${location.search}${hash ? `#${hash}` : ''}`;
+  try {
+    history.replaceState(null, '', nextUrl);
+  } catch (error) {
+    // La navigation visuelle doit rester fonctionnelle si l’origine refuse
+    // la mise à jour de l’URL (par exemple dans certains modes installés).
+    console.warn('URL de navigation non mise à jour.', error);
+  }
+}
+
 export function getElements() {
   return elements;
 }
@@ -97,7 +108,7 @@ export function setActivePage(page, moduleId = null) {
   elements.modulePage.hidden = page !== 'module';
   if (page !== 'module' || !MODULES[moduleId]) {
     document.title = 'Journal de suivi santé';
-    history.replaceState(null, '', location.pathname + location.search);
+    updateAddressBar();
     return;
   }
 
@@ -105,7 +116,7 @@ export function setActivePage(page, moduleId = null) {
   elements.moduleTitle.textContent = module.title;
   elements.moduleDescription.textContent = module.description;
   document.title = `${module.title} · Journal de suivi santé`;
-  history.replaceState(null, '', `#${moduleId}`);
+  updateAddressBar(moduleId);
 }
 
 export function setDefaultDateTime() {
