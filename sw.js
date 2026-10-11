@@ -1,5 +1,5 @@
 // Service worker V4. Incrémenter CACHE_NAME à chaque publication qui change le comportement.
-const CACHE_NAME = 'journal-sante-v4-2026-10-10-2';
+const CACHE_NAME = 'journal-sante-v4-2026-10-11-1';
 const APP_SHELL = [
   './',
   './index.html',
