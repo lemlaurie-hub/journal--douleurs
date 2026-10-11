@@ -34,7 +34,7 @@ export function createEntry(data, input) {
     id: createId('entry'),
     itemIds,
     levels,
-    occurredAt: occurredAt.toISOString(),
+    occurredAt,
     ongoing: Boolean(input.ongoing),
     note: String(input.note || '').trim(),
     createdAt: new Date().toISOString()
