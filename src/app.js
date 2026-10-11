@@ -27,9 +27,20 @@ const data = loadData();
 const elements = getElements();
 let currentModule = 'rhumatologie';
 
+function renderCurrentView() {
+  try {
+    renderAll(data, currentModule);
+  } catch (error) {
+    // Une erreur de rendu ne doit pas laisser tous les boutons sans action.
+    // Les données restent en mémoire et dans le stockage local.
+    console.error('Impossible d’afficher les données de l’application.', error);
+    showToast('L’affichage a rencontré un problème. Les données enregistrées sont conservées.', 'error');
+  }
+}
+
 function persistAndRender() {
   saveData(data);
-  renderAll(data, currentModule);
+  renderCurrentView();
 }
 
 function handleCatalogSubmit(event) {
@@ -127,7 +138,7 @@ function registerEvents() {
       currentModule = button.dataset.openModule;
       resetEntryForm();
       setActivePage('module', currentModule);
-      renderAll(data, currentModule);
+      renderCurrentView();
     });
   });
 
@@ -176,7 +187,7 @@ function registerEvents() {
 
   elements.cancelEdit.addEventListener('click', () => {
     resetEntryForm();
-    renderAll(data, currentModule);
+    renderCurrentView();
   });
 
   elements.catalogDialog.addEventListener('click', event => {
@@ -199,8 +210,18 @@ setDefaultDateTime();
 const initialModule = location.hash.slice(1);
 if (['rhumatologie', 'digestif', 'symptomes-evenements'].includes(initialModule)) {
   currentModule = initialModule;
-  setActivePage('module', currentModule);
 }
-renderAll(data, currentModule);
+
+// Les contrôles sont branchés avant le rendu : une erreur liée à l’affichage
+// ne transforme plus tout l’écran d’accueil en page inerte.
 registerEvents();
 registerServiceWorker();
+
+if (currentModule !== 'rhumatologie') {
+  try {
+    setActivePage('module', currentModule);
+  } catch (error) {
+    console.error('Impossible d’ouvrir le module demandé.', error);
+  }
+}
+renderCurrentView();
