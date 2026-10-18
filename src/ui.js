@@ -1,5 +1,5 @@
 import { getFamilyLabel, getKindLabel } from './catalog.js';
-import { formatLevelRange } from './entries.js';
+import { formatLevelRange, getMinimumDurationMs } from './entries.js';
 import { calculateStats } from './stats.js';
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -69,6 +69,19 @@ function formatLocalDateTime(isoDate) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return 'Date non reconnue';
   return new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function formatMinimumDuration(milliseconds) {
+  if (!milliseconds) return '';
+  const totalMinutes = Math.floor(milliseconds / 60_000);
+  const days = Math.floor(totalMinutes / 1_440);
+  const hours = Math.floor((totalMinutes % 1_440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days) parts.push(`${days} j`);
+  if (hours) parts.push(`${hours} h`);
+  if (minutes || parts.length === 0) parts.push(`${minutes} min`);
+  return `Durée minimale constatée : au moins ${parts.join(' ')}`;
 }
 
 function toLocalInputValue(isoDate) {
@@ -169,6 +182,7 @@ export function resetEntryForm() {
   editingEntry = null;
   originalDateTimeFieldValue = null;
   elements.entryForm.reset();
+  elements.ongoing.disabled = false;
   elements.levels.querySelectorAll('.level-button').forEach(button => {
     button.classList.remove('is-selected');
     button.setAttribute('aria-pressed', 'false');
@@ -195,6 +209,7 @@ export function beginEntryEdit(entry, data, moduleId) {
   originalDateTimeFieldValue = toLocalInputValue(entry.occurredAt);
   elements.occurredAt.value = originalDateTimeFieldValue;
   elements.ongoing.checked = Boolean(entry.ongoing);
+  elements.ongoing.disabled = Boolean(entry.stillAt?.length || entry.endedAt);
   elements.note.value = String(entry.note ?? '');
   elements.saveEntry.textContent = 'Enregistrer les corrections';
   elements.cancelEdit.hidden = false;
@@ -250,7 +265,7 @@ function renderStats(data, target) {
   const cards = [
     ['Observations', String(stats.totalEntries)],
     ['Jours suivis', String(stats.activeDays)],
-    ['Encore en cours', String(stats.ongoingEntries)]
+    ['Fin non renseignée', String(stats.ongoingEntries)]
   ];
 
   for (const [label, value] of cards) {
@@ -315,10 +330,37 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
     level.textContent = formatLevelRange(entry.levels);
     article.append(header, level);
     if (entry.ongoing) {
-      const ongoing = document.createElement('p');
-      ongoing.className = 'ongoing-badge';
-      ongoing.textContent = 'Encore maintenant';
-      article.append(ongoing);
+      const episode = document.createElement('div');
+      episode.className = 'episode-status';
+      const firstCheck = document.createElement('p');
+      firstCheck.className = 'ongoing-badge';
+      firstCheck.textContent = 'Présent lors de cette observation';
+      episode.append(firstCheck);
+      for (const timestamp of entry.stillAt || []) {
+        const check = document.createElement('p');
+        check.className = 'episode-check';
+        check.textContent = `Encore présent le ${formatLocalDateTime(timestamp)}`;
+        episode.append(check);
+      }
+      if (entry.endedAt) {
+        const end = document.createElement('p');
+        end.className = 'episode-end';
+        end.textContent = `Fin indiquée le ${formatLocalDateTime(entry.endedAt)}`;
+        episode.append(end);
+      } else {
+        const unknown = document.createElement('p');
+        unknown.className = 'episode-unknown';
+        unknown.textContent = 'Fin non renseignée';
+        episode.append(unknown);
+      }
+      const durationText = formatMinimumDuration(getMinimumDurationMs(entry));
+      if (durationText) {
+        const duration = document.createElement('p');
+        duration.className = 'episode-duration';
+        duration.textContent = durationText;
+        episode.append(duration);
+      }
+      article.append(episode);
     }
     if (entry.note) {
       const note = document.createElement('p');
@@ -329,6 +371,20 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
     if (actions) {
       const controls = document.createElement('div');
       controls.className = 'history-actions';
+      if (entry.ongoing && !entry.endedAt) {
+        const stillPresentButton = document.createElement('button');
+        stillPresentButton.type = 'button';
+        stillPresentButton.className = 'button button-secondary button-small';
+        stillPresentButton.dataset.stillPresentEntry = entry.id;
+        stillPresentButton.textContent = 'Encore maintenant';
+        stillPresentButton.setAttribute('aria-label', `Noter que l’événement est encore présent : ${itemNames.join(', ')}`);
+        const finishButton = document.createElement('button');
+        finishButton.type = 'button';
+        finishButton.className = 'button button-secondary button-small';
+        finishButton.dataset.finishEntry = entry.id;
+        finishButton.textContent = 'C’est terminé';
+        controls.append(stillPresentButton, finishButton);
+      }
       const editButton = document.createElement('button');
       editButton.type = 'button';
       editButton.className = 'button button-secondary button-small';
