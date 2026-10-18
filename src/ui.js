@@ -1,6 +1,6 @@
 import { getFamilyLabel, getKindLabel } from './catalog.js';
-import { BODY_MAP_REGIONS, getBodyMapDetails } from './body-map.js';
-import { formatLevelRange, getMinimumDurationMs } from './entries.js';
+import { BODY_MAP_REGIONS, BODY_MAP_GROUPS, getBodyMapOptions, getEntrySelections, formatSelectionLabel } from './body-map.js';
+import { formatLevelRange, getMinimumDurationMs } from './entries.js?v=4.4.0';
 import { calculateStats } from './stats.js';
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -36,12 +36,24 @@ const elements = {
   finishDialog: document.querySelector('#finish-dialog'),
   finishForm: document.querySelector('#finish-form'),
   finishAt: document.querySelector('#finish-at'),
+  finishTitle: document.querySelector('#finish-dialog-title'),
+  finishHelp: document.querySelector('#finish-dialog-help'),
+  finishLabel: document.querySelector('#finish-at-label'),
+  finishSubmit: document.querySelector('#finish-submit'),
   cancelFinish: document.querySelector('#cancel-finish'),
   catalogForm: document.querySelector('#catalog-form'),
   catalogDialogTitle: document.querySelector('#catalog-dialog-title'),
   catalogLabel: document.querySelector('#catalog-label'),
   catalogFamily: document.querySelector('#catalog-family'),
   catalogKind: document.querySelector('#catalog-kind'),
+  catalogBodyMap: document.querySelector('#catalog-body-map'),
+  catalogBodyGroup: document.querySelector('#catalog-body-group'),
+  catalogBodySides: document.querySelector('#catalog-body-sides'),
+  catalogBodySurfaces: document.querySelector('#catalog-body-surfaces'),
+  catalogSideRight: document.querySelector('#catalog-side-right'),
+  catalogSideLeft: document.querySelector('#catalog-side-left'),
+  catalogSurfaceFront: document.querySelector('#catalog-surface-front'),
+  catalogSurfaceBack: document.querySelector('#catalog-surface-back'),
   saveCatalogItem: document.querySelector('#save-catalog-item'),
   toast: document.querySelector('#toast')
 };
@@ -73,6 +85,7 @@ let editingCatalogId = null;
 let defaultDateTimeFieldValue = null;
 let finishingEntryId = null;
 let correctingEntryEnd = false;
+let addingPastPresence = false;
 
 function createEmptyMessage(text) {
   const p = document.createElement('p');
@@ -153,6 +166,24 @@ export function setDefaultDateTime() {
   elements.occurredAt.value = defaultDateTimeFieldValue;
 }
 
+function selectedItemChoices() {
+  return [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(input => ({ itemId: input.value, regionId: input.dataset.regionId || '' }));
+}
+
+function selectionKey(choice) {
+  return JSON.stringify([choice.itemId, choice.regionId || '']);
+}
+
+// Un côté précis remplace le choix sans côté, mais droite et gauche coexistent.
+export function reconcileItemChoice(input) {
+  if (!input?.checked) return;
+  for (const other of elements.itemChoices.querySelectorAll('input[type="checkbox"]')) {
+    if (other !== input && other.value === input.value
+        && Boolean(other.dataset.regionId) !== Boolean(input.dataset.regionId)) other.checked = false;
+  }
+}
+
 export function isEntryFormDirty() {
   const itemIds = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value);
   const levels = [...elements.levels.querySelectorAll('.level-button.is-selected')].map(button => Number(button.dataset.level));
@@ -164,7 +195,7 @@ export function isEntryFormDirty() {
       || note.length > 0 || occurredAt !== defaultDateTimeFieldValue;
   }
 
-  return JSON.stringify([...itemIds].sort()) !== JSON.stringify([...(editingEntry.itemIds || [])].sort())
+  return JSON.stringify(selectedItemChoices().map(selectionKey).sort()) !== JSON.stringify(getEntrySelections(editingEntry).map(selectionKey).sort())
     || JSON.stringify(levels) !== JSON.stringify(editingEntry.levels || [])
     || occurredAt !== originalDateTimeFieldValue
     || elements.ongoing.checked !== Boolean(editingEntry.ongoing)
@@ -172,8 +203,13 @@ export function isEntryFormDirty() {
 }
 
 export function getEntryFormInput() {
-  const itemIds = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
-    .map(input => input.value);
+  const choices = selectedItemChoices();
+  const itemIds = [...new Set(choices.map(choice => choice.itemId))];
+  const locations = new Map();
+  for (const { itemId, regionId } of choices) {
+    if (regionId) locations.set(itemId, [...(locations.get(itemId) || []), regionId]);
+  }
+  const itemLocations = Object.fromEntries(locations);
   const levels = [...elements.levels.querySelectorAll('.level-button.is-selected')]
     .map(button => Number(button.dataset.level));
 
@@ -183,6 +219,7 @@ export function getEntryFormInput() {
 
   return {
     itemIds,
+    itemLocations,
     levels,
     occurredAt,
     ongoing: elements.ongoing.checked,
@@ -194,14 +231,31 @@ export function getEditingEntryId() {
   return editingEntry?.id || null;
 }
 
-export function openFinishDialog(entry, { edit = false } = {}) {
+export function openFinishDialog(entry, { edit = false, addPresence = false } = {}) {
   finishingEntryId = entry.id;
   correctingEntryEnd = edit;
+  addingPastPresence = addPresence;
   const now = new Date().toISOString();
   const lastPresence = (entry.stillAt || []).at(-1) || entry.occurredAt;
-  elements.finishAt.min = toLocalInputValue(lastPresence);
-  elements.finishAt.max = toLocalInputValue(now);
-  elements.finishAt.value = toLocalInputValue(edit ? entry.endedAt : now);
+  if (addPresence) {
+    elements.finishTitle.textContent = 'Quand as-tu constaté que c’était encore présent ?';
+    elements.finishHelp.textContent = 'Ajoute un constat passé à cet événement. Il doit se situer après la première observation et avant la fin constatée.';
+    elements.finishLabel.textContent = 'Date et heure du constat';
+    elements.finishSubmit.textContent = 'Ajouter ce constat';
+    elements.finishAt.min = toLocalInputValue(new Date(new Date(entry.occurredAt).getTime() + 60_000));
+    elements.finishAt.max = toLocalInputValue(new Date(new Date(entry.endedAt).getTime() - 60_000));
+    elements.finishAt.value = '';
+  } else {
+    elements.finishTitle.textContent = edit
+      ? 'Quand as-tu constaté que c’était terminé ?'
+      : 'Quand as-tu constaté que c’était terminé ?';
+    elements.finishHelp.textContent = 'L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.';
+    elements.finishLabel.textContent = 'Date et heure constatées';
+    elements.finishSubmit.textContent = edit ? 'Enregistrer la correction' : 'Enregistrer la fin constatée';
+    elements.finishAt.min = toLocalInputValue(lastPresence);
+    elements.finishAt.max = toLocalInputValue(now);
+    elements.finishAt.value = toLocalInputValue(edit ? entry.endedAt : now);
+  }
   elements.finishDialog.showModal();
 }
 
@@ -211,6 +265,10 @@ export function getFinishingEntryId() {
 
 export function isCorrectingEntryEnd() {
   return correctingEntryEnd;
+}
+
+export function isAddingPastPresence() {
+  return addingPastPresence;
 }
 
 export function getFinishTimestamp() {
@@ -224,9 +282,14 @@ export function getFinishTimestamp() {
 export function closeFinishDialog() {
   finishingEntryId = null;
   correctingEntryEnd = false;
+  addingPastPresence = false;
   elements.finishForm.reset();
   elements.finishAt.removeAttribute('min');
   elements.finishAt.removeAttribute('max');
+  elements.finishTitle.textContent = 'Quand as-tu constaté que c’était terminé ?';
+  elements.finishHelp.textContent = 'L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.';
+  elements.finishLabel.textContent = 'Date et heure constatées';
+  elements.finishSubmit.textContent = 'Enregistrer la fin constatée';
   elements.finishDialog.close();
 }
 
@@ -247,10 +310,7 @@ export function resetEntryForm() {
 
 export function beginEntryEdit(entry, data, moduleId) {
   editingEntry = entry;
-  renderItemChoices(data, moduleId, entry.itemIds || []);
-  elements.itemChoices.querySelectorAll('input[type="checkbox"]').forEach(input => {
-    input.checked = (entry.itemIds || []).includes(input.value);
-  });
+  renderItemChoices(data, moduleId, getEntrySelections(entry));
 
   elements.levels.querySelectorAll('.level-button').forEach(button => {
     const selected = (entry.levels || []).includes(Number(button.dataset.level));
@@ -269,11 +329,32 @@ export function beginEntryEdit(entry, data, moduleId) {
   elements.entryForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+export function refreshCatalogBodyMapControls() {
+  const isZone = elements.catalogFamily.value === 'rhumatologie' && elements.catalogKind.value === 'zone';
+  elements.catalogBodyMap.hidden = !isZone;
+  const group = BODY_MAP_GROUPS[elements.catalogBodyGroup.value];
+  elements.catalogBodySides.hidden = !isZone || !group || group.regions.length === 1;
+  elements.catalogBodySurfaces.hidden = !isZone || !group;
+}
+
+function getCatalogBodyMap() {
+  if (elements.catalogFamily.value !== 'rhumatologie' || elements.catalogKind.value !== 'zone') return null;
+  const group = BODY_MAP_GROUPS[elements.catalogBodyGroup.value];
+  if (!group) return null;
+  return {
+    regions: group.regions.filter(region => group.regions.length === 1
+      || (region.endsWith('-right') ? elements.catalogSideRight.checked : elements.catalogSideLeft.checked)),
+    surfaces: [elements.catalogSurfaceFront.checked ? 'front' : null,
+      elements.catalogSurfaceBack.checked ? 'back' : null].filter(Boolean)
+  };
+}
+
 export function getCatalogFormInput() {
   return {
     label: elements.catalogLabel.value,
     family: elements.catalogFamily.value,
-    kind: elements.catalogKind.value
+    kind: elements.catalogKind.value,
+    bodyMap: getCatalogBodyMap()
   };
 }
 
@@ -288,6 +369,18 @@ export function openCatalogDialog({ family = 'rhumatologie', item = null } = {})
   elements.catalogLabel.value = item?.label || '';
   elements.catalogFamily.value = item?.family || family;
   elements.catalogKind.value = item?.kind || (family === 'rhumatologie' ? 'zone' : 'symptome');
+  elements.catalogBodyGroup.replaceChildren(new Option('Sans rattachement au bonhomme', ''));
+  for (const [id, group] of Object.entries(BODY_MAP_GROUPS)) {
+    elements.catalogBodyGroup.add(new Option(group.name, id));
+  }
+  const binding = item?.bodyMap;
+  elements.catalogBodyGroup.value = binding
+    ? (Object.entries(BODY_MAP_GROUPS).find(([, group]) => binding.regions.every(id => group.regions.includes(id)))?.[0] || '') : '';
+  elements.catalogSideRight.checked = binding ? binding.regions.some(id => id.endsWith('-right')) : true;
+  elements.catalogSideLeft.checked = binding ? binding.regions.some(id => id.endsWith('-left')) : true;
+  elements.catalogSurfaceFront.checked = binding ? binding.surfaces.includes('front') : true;
+  elements.catalogSurfaceBack.checked = binding ? binding.surfaces.includes('back') : true;
+  refreshCatalogBodyMapControls();
   elements.catalogDialog.showModal();
   window.setTimeout(() => elements.catalogLabel.focus(), 0);
 }
@@ -365,9 +458,10 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
   for (const entry of entries.slice(0, limit)) {
     const article = document.createElement('article');
     article.className = 'history-entry';
-    const itemNames = (entry.itemIds || [])
-      .map(id => data.catalog.find(item => item.id === id)?.label)
-      .filter(Boolean);
+    const itemNames = getEntrySelections(entry).map(({ itemId, regionId }) => {
+      const item = data.catalog.find(candidate => candidate.id === itemId);
+      return item ? formatSelectionLabel(item, regionId) : null;
+    }).filter(Boolean);
     const header = document.createElement('div');
     header.className = 'history-header';
     const title = document.createElement('strong');
@@ -386,7 +480,7 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
       episode.className = 'episode-status';
       const firstCheck = document.createElement('p');
       firstCheck.className = 'ongoing-badge';
-      firstCheck.textContent = 'Présent lors de cette observation';
+      firstCheck.textContent = 'Début de l’épisode';
       episode.append(firstCheck);
       for (const timestamp of entry.stillAt || []) {
         const check = document.createElement('p');
@@ -442,12 +536,17 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
         finishButton.textContent = 'C’est terminé';
         controls.append(stillPresentButton, finishButton);
       } else if (entry.ongoing && entry.endedAt) {
+        const addPresenceButton = document.createElement('button');
+        addPresenceButton.type = 'button';
+        addPresenceButton.className = 'button button-secondary button-small';
+        addPresenceButton.dataset.addPresenceEntry = entry.id;
+        addPresenceButton.textContent = 'Ajouter un constat passé';
         const correctEndButton = document.createElement('button');
         correctEndButton.type = 'button';
         correctEndButton.className = 'button button-secondary button-small';
         correctEndButton.dataset.editEntryEnd = entry.id;
         correctEndButton.textContent = 'Modifier l’heure de fin';
-        controls.append(correctEndButton);
+        controls.append(addPresenceButton, correctEndButton);
       }
       const editButton = document.createElement('button');
       editButton.type = 'button';
@@ -484,7 +583,8 @@ function renderCatalog(data, moduleId) {
     title.textContent = item.label;
     const meta = document.createElement('span');
     meta.className = 'muted';
-    meta.textContent = `${getFamilyLabel(item.family)} · ${getKindLabel(item.kind)}`;
+    const placement = item.bodyMap ? ` · ${item.bodyMap.regions.map(id => BODY_MAP_REGIONS[id]?.name).join(', ')} · ${item.bodyMap.surfaces.map(view => view === 'front' ? 'face' : 'dos').join(' / ')}` : '';
+    meta.textContent = `${getFamilyLabel(item.family)} · ${getKindLabel(item.kind)}${placement}`;
     const editButton = document.createElement('button');
     editButton.type = 'button';
     editButton.className = 'button button-secondary button-small';
@@ -496,19 +596,17 @@ function renderCatalog(data, moduleId) {
   }
 }
 
-function renderItemChoices(data, moduleId, includeIds = []) {
+function renderItemChoices(data, moduleId, selected = []) {
   elements.itemChoices.replaceChildren();
-  const included = new Set(includeIds);
+  const selectedKeys = new Set(selected.map(selectionKey));
+  const included = new Set(selected.map(choice => choice.itemId));
   const items = data.catalog.filter(item => isItemInModule(item, moduleId) || included.has(item.id));
   if (items.length === 0) {
     elements.itemChoices.append(createEmptyMessage('Aucun élément dans ce module. Crée-en un pour commencer.'));
     return;
   }
-
-  const sorted = [...items].sort((a, b) =>
-    getFamilyLabel(a.family).localeCompare(getFamilyLabel(b.family), 'fr')
-    || a.label.localeCompare(b.label, 'fr')
-  );
+  const sorted = [...items].sort((a, b) => getFamilyLabel(a.family).localeCompare(getFamilyLabel(b.family), 'fr')
+    || a.label.localeCompare(b.label, 'fr'));
   let currentFamily = null;
   for (const item of sorted) {
     if (item.family !== currentFamily) {
@@ -518,18 +616,24 @@ function renderItemChoices(data, moduleId, includeIds = []) {
       heading.textContent = getFamilyLabel(item.family);
       elements.itemChoices.append(heading);
     }
-    const label = document.createElement('label');
-    label.className = 'choice-card';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = item.id;
-    input.checked = included.has(item.id);
-    const text = document.createElement('span');
-    text.textContent = item.label;
-    const kind = document.createElement('small');
-    kind.textContent = getKindLabel(item.kind);
-    label.append(input, text, kind);
-    elements.itemChoices.append(label);
+    const regions = new Set(item.bodyMap?.regions || ['']);
+    // Une ancienne sélection reste éditable même si le catalogue a changé.
+    for (const choice of selected.filter(choice => choice.itemId === item.id)) regions.add(choice.regionId);
+    for (const regionId of regions) {
+      const label = document.createElement('label');
+      label.className = 'choice-card';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = item.id;
+      input.dataset.regionId = regionId;
+      input.checked = selectedKeys.has(selectionKey({ itemId: item.id, regionId }));
+      const text = document.createElement('span');
+      text.textContent = formatSelectionLabel(item, regionId);
+      const kind = document.createElement('small');
+      kind.textContent = getKindLabel(item.kind);
+      label.append(input, text, kind);
+      elements.itemChoices.append(label);
+    }
   }
 }
 
@@ -567,26 +671,25 @@ export function renderBodyMap(data, moduleId, state) {
   elements.bodyMapOptions.replaceChildren();
 
   if (region) {
-    const checkedIds = new Set([...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value));
-    for (const label of getBodyMapDetails(state.region, state.view)) {
-      const item = data.catalog.find(candidate => candidate.family === 'rhumatologie'
-        && candidate.kind === 'zone'
-        && candidate.label.toLocaleLowerCase('fr') === label.toLocaleLowerCase('fr'));
+    const checkedKeys = new Set(selectedItemChoices().map(selectionKey));
+    for (const option of getBodyMapOptions(data.catalog, state.region, state.view)) {
+      const { label, itemId, regionId } = option;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'body-map-option';
       button.dataset.bodyMapChoice = label;
+      button.dataset.bodyMapItem = itemId;
+      button.dataset.bodyMapRegion = regionId;
       button.textContent = label;
-      const selected = Boolean(item && checkedIds.has(item.id));
+      const selected = checkedKeys.has(selectionKey({ itemId, regionId }));
       button.classList.toggle('is-selected', selected);
       button.setAttribute('aria-pressed', String(selected));
       elements.bodyMapOptions.append(button);
     }
   }
 
-  const selectedItems = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
-    .map(input => data.catalog.find(item => item.id === input.value))
-    .filter(Boolean);
+  const selectedItems = selectedItemChoices().map(choice => ({ ...choice,
+    item: data.catalog.find(item => item.id === choice.itemId) })).filter(choice => choice.item);
   elements.bodyMapSelectedList.replaceChildren();
   if (selectedItems.length === 0) {
     const empty = document.createElement('span');
@@ -595,23 +698,26 @@ export function renderBodyMap(data, moduleId, state) {
     elements.bodyMapSelectedList.append(empty);
     return;
   }
-  for (const item of selectedItems) {
+  for (const { item, regionId } of selectedItems) {
     const chip = document.createElement('span');
     chip.className = 'body-map-chip';
     const label = document.createElement('span');
-    label.textContent = item.label;
+    label.textContent = formatSelectionLabel(item, regionId);
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'body-map-remove';
     remove.dataset.bodyMapRemoveItem = item.id;
+    remove.dataset.bodyMapRemoveRegion = regionId;
     remove.textContent = '×';
-    remove.setAttribute('aria-label', `Retirer ${item.label}`);
+    remove.setAttribute('aria-label', `Retirer ${formatSelectionLabel(item, regionId)}`);
     chip.append(label, remove);
     elements.bodyMapSelectedList.append(chip);
   }
 }
 
 export function renderAll(data, moduleId, bodyMapState = { view: 'front', region: null, showAllChoices: false }) {
+  document.querySelector('#catalog-title').textContent = moduleId === 'rhumatologie'
+    ? 'Zones enregistrées' : 'Éléments enregistrés';
   for (const id of Object.keys(MODULES)) {
     const count = data.catalog.filter(item => isItemInModule(item, id)).length;
     const target = document.querySelector(`#count-${id}`);
@@ -619,10 +725,7 @@ export function renderAll(data, moduleId, bodyMapState = { view: 'front', region
   }
   renderStats(data, elements.homeStats);
   renderHistory(data, elements.homeHistory, { limit: 5 });
-  const selectedBeforeRender = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
-    .map(input => input.value);
-  const preservedIds = [...new Set([...selectedBeforeRender, ...(editingEntry?.itemIds || [])])];
-  renderItemChoices(data, moduleId, preservedIds);
+  renderItemChoices(data, moduleId, selectedItemChoices());
   renderBodyMap(data, moduleId, bodyMapState);
   renderStats(filteredData(data, moduleId), elements.moduleStats);
   renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
