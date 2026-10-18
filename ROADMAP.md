@@ -44,6 +44,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 - [x] Page Rhumato (présentation provisoire).
 - [x] Page Digestif (présentation provisoire).
 - [x] Page Symptômes / événements (présentation provisoire).
+- [x] Carte corporelle Rhumato recto-verso avec zones affinées selon l’avant/l’arrière, sélection multiple et retrait direct des zones cochées.
 - [ ] Page Mesures.
   - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
 - [x] Ajout/modification d'un élément du catalogue via une logique métier unique.
