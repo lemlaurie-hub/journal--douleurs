@@ -1,7 +1,6 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
-import { getBodyMapDetails } from './body-map.js';
-import { createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry, updateEntryEnd } from './entries.js?v=4.3.0';
+import { addPastPresence, createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry, updateEntryEnd } from './entries.js?v=4.4.0';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
@@ -16,10 +15,13 @@ import {
   getEntryFormInput,
   isEntryFormDirty,
   isCorrectingEntryEnd,
+  isAddingPastPresence,
   openCatalogDialog,
   openFinishDialog,
   renderAll,
   renderBodyMap,
+  refreshCatalogBodyMapControls,
+  reconcileItemChoice,
   resetEntryForm,
   setDefaultDateTime,
   setActivePage,
@@ -98,7 +100,11 @@ function handleDeleteEntry(entryId) {
 
 function handleEpisodeAction(action, entryId) {
   try {
-    if (action === 'still-present') recordStillPresent(data, entryId);
+    if (action === 'still-present') {
+      // Capturer l'heure au clic, avant sauvegarde et rendu.
+      const clickedAt = new Date().toISOString();
+      recordStillPresent(data, entryId, clickedAt);
+    }
     else {
       const entry = data.entries.find(row => row.id === entryId);
       if (entry) openFinishDialog(entry);
@@ -118,34 +124,37 @@ function handleFinishSubmit(event) {
     const entryId = getFinishingEntryId();
     const endedAt = getFinishTimestamp();
     const correctingEnd = isCorrectingEntryEnd();
-    if (correctingEnd) updateEntryEnd(data, entryId, endedAt);
+    const addingPresence = isAddingPastPresence();
+    if (addingPresence) addPastPresence(data, entryId, endedAt);
+    else if (correctingEnd) updateEntryEnd(data, entryId, endedAt);
     else finishEntry(data, entryId, endedAt);
     closeFinishDialog();
     persistAndRender();
-    showToast(correctingEnd ? 'Heure de fin corrigée.' : 'Fin constatée enregistrée.');
+    showToast(addingPresence
+      ? 'Constat passé ajouté.'
+      : correctingEnd ? 'Heure de fin corrigée.' : 'Fin constatée enregistrée.');
   } catch (error) {
     showToast(error.message, 'error');
   }
 }
 
-function handleBodyMapChoice(label) {
-  const item = data.catalog.find(candidate => candidate.family === 'rhumatologie'
-    && candidate.kind === 'zone'
-    && candidate.label.toLocaleLowerCase('fr') === label.toLocaleLowerCase('fr'))
-    || createCatalogItem(data, { label, family: 'rhumatologie', kind: 'zone' });
-
-  // Les nouveaux éléments de la carte deviennent des zones du catalogue.
-  // La création est sauvegardée immédiatement; l'observation, elle, ne l'est
-  // qu'au bouton Enregistrer.
-  if (![...elements.itemChoices.querySelectorAll('input[type="checkbox"]')].some(input => input.value === item.id)) {
-    persistAndRender();
+function handleBodyMapChoice(label, itemId = '', regionId = '') {
+  try {
+    let item = itemId ? data.catalog.find(candidate => candidate.id === itemId) : null;
+    if (!item) {
+      item = createCatalogItem(data, { label, family: 'rhumatologie', kind: 'zone' });
+      // Seul le catalogue est enregistré ici; l'observation attend Enregistrer.
+      persistAndRender();
+    }
+    const checkbox = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]')]
+      .find(input => input.value === item.id && (input.dataset.regionId || '') === regionId);
+    if (!checkbox) return;
+    checkbox.checked = !checkbox.checked;
+    reconcileItemChoice(checkbox);
+    renderBodyMap(data, currentModule, bodyMapState);
+  } catch (error) {
+    showToast(error.message, 'error');
   }
-
-  const checkbox = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]')]
-    .find(input => input.value === item.id);
-  if (!checkbox) return;
-  checkbox.checked = !checkbox.checked;
-  renderBodyMap(data, currentModule, bodyMapState);
 }
 
 function handleExport() {
@@ -231,13 +240,14 @@ function registerEvents() {
     }
     const choice = event.target.closest('[data-body-map-choice]');
     if (choice) {
-      handleBodyMapChoice(choice.dataset.bodyMapChoice);
+      handleBodyMapChoice(choice.dataset.bodyMapChoice, choice.dataset.bodyMapItem, choice.dataset.bodyMapRegion);
       return;
     }
     const remove = event.target.closest('[data-body-map-remove-item]');
     if (remove) {
       const checkbox = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]')]
-        .find(input => input.value === remove.dataset.bodyMapRemoveItem);
+        .find(input => input.value === remove.dataset.bodyMapRemoveItem
+          && (input.dataset.regionId || '') === (remove.dataset.bodyMapRemoveRegion || ''));
       if (checkbox) checkbox.checked = false;
       renderBodyMap(data, currentModule, bodyMapState);
     }
@@ -246,13 +256,17 @@ function registerEvents() {
     bodyMapState.showAllChoices = !bodyMapState.showAllChoices;
     renderBodyMap(data, currentModule, bodyMapState);
   });
-  elements.itemChoices.addEventListener('change', () => {
+  elements.itemChoices.addEventListener('change', event => {
+    reconcileItemChoice(event.target);
     renderBodyMap(data, currentModule, bodyMapState);
   });
 
   document.querySelectorAll('[data-close-catalog]').forEach(button => {
     button.addEventListener('click', closeCatalogDialog);
   });
+  for (const field of [elements.catalogFamily, elements.catalogKind, elements.catalogBodyGroup]) {
+    field.addEventListener('change', refreshCatalogBodyMapControls);
+  }
   elements.catalogForm.addEventListener('submit', handleCatalogSubmit);
   elements.finishForm.addEventListener('submit', handleFinishSubmit);
   elements.cancelFinish.addEventListener('click', closeFinishDialog);
@@ -266,6 +280,12 @@ function registerEvents() {
   });
 
   elements.moduleHistory.addEventListener('click', event => {
+    const addPresenceButton = event.target.closest('[data-add-presence-entry]');
+    if (addPresenceButton) {
+      const entry = data.entries.find(row => row.id === addPresenceButton.dataset.addPresenceEntry);
+      if (entry) openFinishDialog(entry, { addPresence: true });
+      return;
+    }
     const stillPresentButton = event.target.closest('[data-still-present-entry]');
     if (stillPresentButton) {
       handleEpisodeAction('still-present', stillPresentButton.dataset.stillPresentEntry);
