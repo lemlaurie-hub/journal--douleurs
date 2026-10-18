@@ -112,7 +112,7 @@ export function recordStillPresent(data, entryId, observedAt = new Date().toISOS
   return entry;
 }
 
-/** Enregistre une fin explicitement signalée, sans clôture automatique. */
+/** Enregistre l'heure à laquelle l'absence de l'événement a été constatée. */
 export function finishEntry(data, entryId, endedAt = new Date().toISOString()) {
   const entry = data.entries.find(candidate => candidate.id === entryId);
   if (!entry) throw new Error('Cette observation n’existe plus.');
@@ -120,15 +120,29 @@ export function finishEntry(data, entryId, endedAt = new Date().toISOString()) {
   if (entry.endedAt) throw new Error('Une fin a déjà été indiquée pour cet événement.');
 
   const timestamp = normalizeOccurredAt(endedAt);
+  // L'heure de fin constatée peut être antérieure à maintenant, mais elle ne
+  // peut pas précéder un constat explicite où l'événement était encore là.
   validateEpisodeTimeline({ ...entry, endedAt: timestamp });
   entry.endedAt = timestamp;
   return entry;
 }
 
-/** Durée minimale observée entre le premier constat et le dernier point connu. */
+/** Corrige l'heure de fin constatée sans toucher au reste de l'observation. */
+export function updateEntryEnd(data, entryId, endedAt) {
+  const entry = data.entries.find(candidate => candidate.id === entryId);
+  if (!entry) throw new Error('Cette observation n’existe plus.');
+  if (!entry.ongoing || !entry.endedAt) throw new Error('Aucune fin constatée ne peut être corrigée pour cette observation.');
+
+  const timestamp = normalizeOccurredAt(endedAt);
+  validateEpisodeTimeline({ ...entry, endedAt: timestamp });
+  entry.endedAt = timestamp;
+  return entry;
+}
+
+/** Durée minimale prouvée entre le premier et le dernier constat de présence. */
 export function getMinimumDurationMs(entry) {
   if (!entry?.ongoing) return null;
-  const lastKnownAt = entry.endedAt || (entry.stillAt || []).at(-1);
+  const lastKnownAt = (entry.stillAt || []).at(-1);
   if (!lastKnownAt) return null;
   const duration = new Date(lastKnownAt).getTime() - new Date(entry.occurredAt).getTime();
   return Number.isFinite(duration) && duration > 0 ? duration : null;
