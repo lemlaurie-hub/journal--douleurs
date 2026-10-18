@@ -1,3 +1,5 @@
+import { normalizeItemLocations } from './body-map.js';
+
 // Logique métier des observations.
 // La création et la suppression d'une observation sont centralisées ici.
 
@@ -27,6 +29,7 @@ function normalizeLevels(levels) {
 
 export function createEntry(data, input) {
   const itemIds = validateItemIds(data, input.itemIds);
+  const itemLocations = normalizeItemLocations(input.itemLocations, itemIds);
   const levels = normalizeLevels(input.levels);
   const occurredAt = normalizeOccurredAt(input.occurredAt);
 
@@ -41,6 +44,7 @@ export function createEntry(data, input) {
     createdAt: new Date().toISOString()
   };
 
+  if (Object.keys(itemLocations).length) entry.itemLocations = itemLocations;
   data.entries.unshift(entry);
   return entry;
 }
@@ -69,6 +73,9 @@ export function updateEntry(data, entryId, input) {
   const sameItemSet = submittedItemIds.length === (entry.itemIds || []).length
     && submittedItemIds.every(id => entry.itemIds.includes(id));
   const itemIds = sameItemSet ? [...entry.itemIds] : submittedItemIds;
+  const existingLocations = Object.fromEntries(Object.entries(entry.itemLocations || {})
+    .filter(([id]) => itemIds.includes(id)));
+  const itemLocations = normalizeItemLocations(input.itemLocations ?? existingLocations, itemIds);
   const submittedLevels = normalizeLevels(input.levels);
   const sameLevels = JSON.stringify(submittedLevels) === JSON.stringify(entry.levels || []);
   const levels = sameLevels ? [...entry.levels] : submittedLevels;
@@ -90,6 +97,8 @@ export function updateEntry(data, entryId, input) {
     ongoing: Boolean(input.ongoing) || Boolean(entry.stillAt?.length || entry.endedAt),
     note
   });
+  if (Object.keys(itemLocations).length) entry.itemLocations = itemLocations;
+  else delete entry.itemLocations;
   return entry;
 }
 
@@ -108,6 +117,33 @@ export function recordStillPresent(data, entryId, observedAt = new Date().toISOS
     throw new Error('Cette heure ne peut pas précéder le dernier constat enregistré.');
   }
   if (!stillAt.includes(timestamp)) stillAt.push(timestamp);
+  entry.stillAt = stillAt;
+  return entry;
+}
+
+/** Ajoute après coup un constat de présence à un épisode déjà terminé. */
+export function addPastPresence(data, entryId, observedAt) {
+  const entry = data.entries.find(candidate => candidate.id === entryId);
+  if (!entry) throw new Error('Cette observation n’existe plus.');
+  if (!entry.ongoing || !entry.endedAt) throw new Error('Ce constat passé concerne uniquement un événement terminé.');
+
+  const timestamp = normalizeOccurredAt(observedAt);
+  const stillAt = [...(entry.stillAt || [])].map(normalizeOccurredAt);
+  validateEpisodeTimeline({ ...entry, stillAt });
+
+  // Le premier horodatage est déjà le constat initial; un second constat doit
+  // être postérieur au début et strictement antérieur à la fin constatée.
+  if (new Date(timestamp) <= new Date(entry.occurredAt)) {
+    throw new Error('Le constat passé doit être après la première observation.');
+  }
+  if (new Date(timestamp) >= new Date(entry.endedAt)) {
+    throw new Error('Le constat de présence doit précéder l’heure de fin.');
+  }
+
+  if (!stillAt.includes(timestamp)) {
+    stillAt.push(timestamp);
+    stillAt.sort((a, b) => new Date(a) - new Date(b));
+  }
   entry.stillAt = stillAt;
   return entry;
 }
