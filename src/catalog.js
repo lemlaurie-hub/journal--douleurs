@@ -1,3 +1,5 @@
+import { normalizeBodyMap } from './body-map.js';
+
 // Gestion centralisée du catalogue d'éléments de suivi.
 // Une seule fonction crée un élément, quel que soit l'écran qui l'appelle.
 
@@ -16,6 +18,10 @@ export function createCatalogItem(data, input) {
   const label = String(input.label || '').trim();
   const family = String(input.family || '').trim();
   const kind = String(input.kind || '').trim();
+  const bodyMap = normalizeBodyMap(input.bodyMap);
+  if (bodyMap && (family !== 'rhumatologie' || kind !== 'zone')) {
+    throw new Error('Le rattachement au bonhomme est réservé aux zones Rhumato.');
+  }
 
   if (!label) {
     throw new Error('Le nom de l’élément est obligatoire.');
@@ -47,6 +53,7 @@ export function createCatalogItem(data, input) {
     createdAt: new Date().toISOString()
   };
 
+  if (bodyMap) item.bodyMap = bodyMap;
   data.catalog.push(item);
   return item;
 }
@@ -63,6 +70,10 @@ export function updateCatalogItem(data, itemId, input) {
   const label = String(input.label || '').trim();
   const family = String(input.family || '').trim();
   const kind = String(input.kind || '').trim();
+  const bodyMap = normalizeBodyMap(input.bodyMap);
+  if (bodyMap && (family !== 'rhumatologie' || kind !== 'zone')) {
+    throw new Error('Le rattachement au bonhomme est réservé aux zones Rhumato.');
+  }
 
   if (!label) throw new Error('Le nom de l’élément est obligatoire.');
   if (!ALLOWED_FAMILIES.includes(family)) throw new Error('La famille choisie n’est pas valide.');
@@ -75,6 +86,8 @@ export function updateCatalogItem(data, itemId, input) {
   if (duplicate) throw new Error('Cet élément existe déjà dans cette catégorie.');
 
   Object.assign(item, { label, family, kind });
+  if (bodyMap) item.bodyMap = bodyMap;
+  else if (input.bodyMap !== undefined || family !== 'rhumatologie' || kind !== 'zone') delete item.bodyMap;
   return item;
 }
 
