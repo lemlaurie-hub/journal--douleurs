@@ -1,4 +1,5 @@
 import { getFamilyLabel, getKindLabel } from './catalog.js';
+import { BODY_MAP_REGIONS, getBodyMapDetails } from './body-map.js';
 import { formatLevelRange, getMinimumDurationMs } from './entries.js';
 import { calculateStats } from './stats.js';
 
@@ -14,6 +15,15 @@ const elements = {
   moduleStats: document.querySelector('#module-stats'),
   entryForm: document.querySelector('#entry-form'),
   itemChoices: document.querySelector('#item-choices'),
+  bodyMap: document.querySelector('#body-map'),
+  bodyMapFront: document.querySelector('#body-map-front'),
+  bodyMapBack: document.querySelector('#body-map-back'),
+  bodyFigureSvg: document.querySelector('.body-figure-svg'),
+  bodyMapTitle: document.querySelector('#body-map-title'),
+  bodyMapHelp: document.querySelector('#body-map-help'),
+  bodyMapOptions: document.querySelector('#body-map-options'),
+  bodyMapSelectedList: document.querySelector('#body-map-selected-list'),
+  manualChoicesToggle: document.querySelector('#manual-choices-toggle'),
   levels: document.querySelector('#levels'),
   occurredAt: document.querySelector('#occurred-at'),
   ongoing: document.querySelector('#ongoing'),
@@ -469,7 +479,85 @@ function renderItemChoices(data, moduleId, includeIds = []) {
   }
 }
 
-export function renderAll(data, moduleId) {
+export function renderBodyMap(data, moduleId, state) {
+  const isRhumato = moduleId === 'rhumatologie';
+  elements.bodyMap.hidden = !isRhumato;
+  elements.manualChoicesToggle.hidden = !isRhumato;
+  elements.manualChoicesToggle.textContent = state.showAllChoices
+    ? 'Masquer les autres éléments du catalogue'
+    : 'Voir toutes les zones du catalogue';
+  elements.itemChoices.hidden = isRhumato && !state.showAllChoices;
+
+  elements.bodyMapFront.setAttribute('aria-pressed', String(state.view === 'front'));
+  elements.bodyMapBack.setAttribute('aria-pressed', String(state.view === 'back'));
+  elements.bodyMapFront.classList.toggle('is-active', state.view === 'front');
+  elements.bodyMapBack.classList.toggle('is-active', state.view === 'back');
+  elements.bodyFigureSvg.style.transform = state.view === 'back' ? 'scaleX(-1)' : 'none';
+  document.querySelectorAll('.body-side-left, .body-side-right').forEach(side => {
+    const isLeft = side.classList.contains('body-side-left');
+    side.textContent = state.view === 'back'
+      ? (isLeft ? 'gauche' : 'droite')
+      : (isLeft ? 'droite' : 'gauche');
+  });
+  document.querySelectorAll('[data-body-region]').forEach(button => {
+    const frontLeft = Number(button.dataset.frontLeft);
+    button.style.left = `${state.view === 'back' ? 100 - frontLeft : frontLeft}%`;
+    button.classList.toggle('is-selected', button.dataset.bodyRegion === state.region);
+  });
+
+  const region = BODY_MAP_REGIONS[state.region];
+  elements.bodyMapTitle.textContent = region?.name || 'Choisis une zone sur le bonhomme';
+  elements.bodyMapHelp.textContent = region
+    ? (state.view === 'front' ? 'Précisions sur l’avant du corps.' : 'Précisions sur l’arrière du corps.')
+    : 'Les précisions proposées changent entre la vue de face et la vue de dos.';
+  elements.bodyMapOptions.replaceChildren();
+
+  if (region) {
+    const checkedIds = new Set([...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value));
+    for (const label of getBodyMapDetails(state.region, state.view)) {
+      const item = data.catalog.find(candidate => candidate.family === 'rhumatologie'
+        && candidate.kind === 'zone'
+        && candidate.label.toLocaleLowerCase('fr') === label.toLocaleLowerCase('fr'));
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'body-map-option';
+      button.dataset.bodyMapChoice = label;
+      button.textContent = label;
+      const selected = Boolean(item && checkedIds.has(item.id));
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+      elements.bodyMapOptions.append(button);
+    }
+  }
+
+  const selectedItems = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]:checked')]
+    .map(input => data.catalog.find(item => item.id === input.value))
+    .filter(Boolean);
+  elements.bodyMapSelectedList.replaceChildren();
+  if (selectedItems.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'muted';
+    empty.textContent = 'Aucune zone choisie';
+    elements.bodyMapSelectedList.append(empty);
+    return;
+  }
+  for (const item of selectedItems) {
+    const chip = document.createElement('span');
+    chip.className = 'body-map-chip';
+    const label = document.createElement('span');
+    label.textContent = item.label;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'body-map-remove';
+    remove.dataset.bodyMapRemoveItem = item.id;
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', `Retirer ${item.label}`);
+    chip.append(label, remove);
+    elements.bodyMapSelectedList.append(chip);
+  }
+}
+
+export function renderAll(data, moduleId, bodyMapState = { view: 'front', region: null, showAllChoices: false }) {
   for (const id of Object.keys(MODULES)) {
     const count = data.catalog.filter(item => isItemInModule(item, id)).length;
     const target = document.querySelector(`#count-${id}`);
@@ -481,6 +569,7 @@ export function renderAll(data, moduleId) {
     .map(input => input.value);
   const preservedIds = [...new Set([...selectedBeforeRender, ...(editingEntry?.itemIds || [])])];
   renderItemChoices(data, moduleId, preservedIds);
+  renderBodyMap(data, moduleId, bodyMapState);
   renderStats(filteredData(data, moduleId), elements.moduleStats);
   renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
   renderCatalog(data, moduleId);
