@@ -1,3 +1,5 @@
+import { normalizeBodyMap, normalizeItemLocations } from './body-map.js';
+
 // Formats d'export et fonctions d'import/export de données.
 // Ce module ne lit ni n'écrit le stockage : l'appelant valide l'import puis
 // enregistre le résultat en une seule écriture.
@@ -138,6 +140,10 @@ function validateData(data) {
     if (catalogIds.has(item.id)) {
       throw new Error(`Fichier invalide : identifiant de catalogue répété (${item.id}).`);
     }
+    if (item.bodyMap != null) {
+      normalizeBodyMap(item.bodyMap);
+      if (item.family !== 'rhumatologie' || item.kind !== 'zone') throw new Error('Rattachement de catalogue invalide.');
+    }
     catalogIds.add(item.id);
   }
 
@@ -181,6 +187,7 @@ function validateData(data) {
     if (entryIds.has(entry.id)) {
       throw new Error(`Fichier invalide : identifiant d’observation répété (${entry.id}).`);
     }
+    normalizeItemLocations(entry.itemLocations, entry.itemIds);
     entryIds.add(entry.id);
   }
 }
@@ -218,7 +225,7 @@ export function parseBackup(input) {
 }
 
 function catalogKey(item) {
-  return `${item.label.trim().toLocaleLowerCase('fr')}|${item.family}|${item.kind}`;
+  return `${item.label.trim().toLocaleLowerCase('fr')}|${item.family}|${item.kind}|${stableStringify(normalizeBodyMap(item.bodyMap))}`;
 }
 
 function withoutId(record) {
@@ -254,8 +261,13 @@ export function mergeBackup(currentData, backupInput) {
     const byId = catalogById.get(sourceItem.id);
     const byKey = catalogByKey.get(catalogKey(sourceItem));
     const sameIdSameContent = byId && stableStringify(withoutId(byId)) === stableStringify(withoutId(sourceItem));
-    if (sameIdSameContent || byKey) {
-      itemIdMap.set(sourceItem.id, (sameIdSameContent ? byId : byKey).id);
+    // Un ancien export sans rattachement ne doit pas dupliquer un élément
+    // dont seul le placement a été enrichi depuis (notamment après import V3).
+    const sameIdWithoutIncomingPlacement = byId && !sourceItem.bodyMap
+      && byId.label.trim().toLocaleLowerCase('fr') === sourceItem.label.trim().toLocaleLowerCase('fr')
+      && byId.family === sourceItem.family && byId.kind === sourceItem.kind;
+    if (sameIdSameContent || sameIdWithoutIncomingPlacement || byKey) {
+      itemIdMap.set(sourceItem.id, (sameIdSameContent || sameIdWithoutIncomingPlacement ? byId : byKey).id);
       continue;
     }
 
@@ -274,6 +286,14 @@ export function mergeBackup(currentData, backupInput) {
   for (const sourceEntry of incoming.entries) {
     const entry = clone(sourceEntry);
     entry.itemIds = entry.itemIds.map(id => itemIdMap.get(id) || id);
+    if (entry.itemLocations) {
+      const locations = new Map();
+      for (const [id, regions] of Object.entries(entry.itemLocations)) {
+        const mappedId = itemIdMap.get(id) || id;
+        locations.set(mappedId, [...new Set([...(locations.get(mappedId) || []), ...regions])].sort());
+      }
+      entry.itemLocations = Object.fromEntries(locations);
+    }
     const entryKey = stableStringify(withoutId(entry));
     const sameId = existingEntries.get(entry.id);
     const sameIdHasDifferentContent = sameId
