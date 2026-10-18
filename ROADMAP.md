@@ -49,7 +49,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
   - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
 - [x] Ajout/modification d'un élément du catalogue via une logique métier unique.
 - [x] Modification d'une observation depuis son module, avec le même formulaire et sans toucher les champs inchangés.
-- [x] Suivi d'un épisode : première observation horodatée, constats successifs « Encore maintenant », fin explicite facultative, durée minimale constatée et fin inconnue sans clôture automatique.
+- [x] Suivi d'un épisode : première observation horodatée, constats successifs « Encore maintenant », fin facultative avec choix/correction d'une heure passée, durée minimale calculée uniquement jusqu'au dernier constat de présence et fin inconnue sans clôture automatique.
 - [ ] Historique filtrable et plus compact.
 - [ ] Statistiques améliorées par période et catégorie.
 
