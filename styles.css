@@ -18,3 +18,16 @@
 @media(min-width:620px){.form-grid{grid-template-columns:1fr 1fr}.level-grid{grid-template-columns:repeat(4,1fr)}.module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:380px){.body-map{padding:10px}.body-figure{height:320px}.body-hotspot{width:42px;height:42px}}
 
+
+/* Rubriques ouvertes à la demande; leur état est conservé lors d'un rendu. */
+.collapsible-panel > summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;cursor:pointer;list-style:none}
+.collapsible-panel > summary::-webkit-details-marker{display:none}
+.collapsible-panel > summary::after{content:'＋';font-size:1.4rem;color:#315f74;flex-shrink:0}
+.collapsible-panel[open] > summary::after{content:'−'}
+.collapsible-panel > summary h2{margin:0;font-size:1.25rem}
+.collapsible-panel[open] > summary{margin-bottom:14px}
+.collapsible-panel > summary:focus-visible{outline:3px solid #315f74;outline-offset:4px;border-radius:6px}
+
+#catalog-body-sides,#catalog-body-surfaces{display:flex;flex-wrap:wrap;gap:8px 24px}
+#catalog-body-map legend{font-size:.95rem}
+.dialog{max-height:calc(100dvh - 32px);overflow-y:auto}
