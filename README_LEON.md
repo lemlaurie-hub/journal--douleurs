@@ -77,18 +77,14 @@ Aucune suppression ou réinitialisation large sans accord explicite.
 
 ## 5. Décisions et autorisation
 
-Une correction locale, clairement déterminée et sans choix fonctionnel important peut être préparée directement.
+Le travail suit quatre étapes distinctes, dans cet ordre :
 
-Si plusieurs comportements sont possibles ou si la modification change une règle fonctionnelle, expliquer d'abord :
+1. **Réflexion commune.** Écouter tous les points de Laurie, lire et diagnostiquer sans modifier le code. Une idée, une précision ou un « oui » pendant cette discussion ne signifie pas que la réflexion est terminée.
+2. **Développement après accord.** Attendre que Laurie indique explicitement que la réflexion est terminée et qu'on peut coder. Puis développer et tester les changements convenus.
+3. **Bilan.** Présenter ce qui a été fait, les tests, les limites et ce qui reste à faire.
+4. **Publication après validation séparée.** Attendre l'accord explicite de Laurie pour publier, puis publier et vérifier le dépôt distant.
 
-- ce que fait actuellement l'application ;
-- pourquoi cela pose problème ;
-- les solutions possibles ;
-- celle qui paraît la plus cohérente et ses conséquences.
-
-Laurie valide ensuite la règle.
-
-Le correctif peut être développé et testé. **Toute publication sur GitHub attend un accord explicite de Laurie, généralement « Go ».**
+Ne pas démarrer une longue phase de développement alors que Laurie expose encore ses points. Ne pas confondre accord sur une règle, accord pour coder et accord pour publier.
 
 ## 6. Tester réellement
 
@@ -160,7 +156,7 @@ Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il 
 
 Les tests couvrent également la modification d'une observation sans recréer son identifiant ni changer sa date précise, sa note ou ses métadonnées intactes. Ils vérifient le reclassement ciblé et idempotent des éléments V3 nommés exactement « Migraine » et « Migraine ophtalmique ».
 
-Les tests du suivi d'épisode vérifient que chaque action « Encore maintenant » ajoute une heure au même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Cette heure de fin peut être antidatée, corrigée ensuite, mais pas avant le dernier constat de présence. La fin est facultative et explicite, les anciennes observations restent valides sans durée inventée et aucun constat de présence ne peut être antidaté après un constat plus récent. L'interface ne clôt jamais automatiquement un événement.
+Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant » enregistre son horodatage dans le même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Pour un événement déjà terminé, un constat passé peut être ajouté après coup, uniquement entre le début et la fin; les constats sont ordonnés et un horaire identique ne crée pas de doublon. La fin peut être antidatée et corrigée ensuite, mais pas avant le dernier constat de présence. La fin est facultative et explicite, les anciennes observations restent valides sans durée inventée. L'interface ne clôt jamais automatiquement un événement.
 
 ## 10. Publication GitHub
 
@@ -245,4 +241,23 @@ L'import V3 sera conçu séparément et ne devra jamais effacer la source V3.
 - Les éléments V3 d'identifiants `item-v3-*` et de libellés exacts « Migraine » ou « Migraine ophtalmique » sont classés comme symptômes/événements. Cette migration idempotente ne change pas les observations. Les autres anciennes zones restent à corriger au cas par cas.
 - Le modèle de stockage existant est conservé ; ajouter un module ne nécessite pas de convertir l'historique.
 - La carte Rhumato recto-verso crée au besoin des zones précises dans le catalogue, puis les coche dans le formulaire courant. Les coches peuvent être retirées depuis le résumé de sélection ; les anciennes entrées ne sont pas modifiées.
-- Pour un épisode coché « Présent à cette heure », `occurredAt` reste la première observation. Chaque action « Encore maintenant » ajoute un horodatage dans `stillAt`, sans créer une nouvelle observation. La durée minimale constatée se calcule entre `occurredAt` et le dernier constat où l'événement était encore présent ; l'heure à laquelle l'absence est constatée (`endedAt`) est une information séparée et peut être antidatée ou corrigée. Elle ne prolonge pas la durée minimale. Sans `endedAt`, la fin reste inconnue ; aucune fermeture automatique n'est appliquée. Les anciennes observations avec `ongoing: true` sont interprétées comme présentes au moment de leur première observation et n'ont ni heure de fin ni durée ultérieure inventée.
+- Pour un épisode signalé comme présent, `occurredAt` est le début observé. Chaque clic « Encore maintenant » capture l'heure du clic dans `stillAt`, sans créer une nouvelle observation. La durée minimale constatée se calcule entre `occurredAt` et le dernier constat où l'événement était encore présent ; l'heure à laquelle l'absence est constatée (`endedAt`) est séparée et ne prolonge pas cette durée. Un épisode terminé peut recevoir après coup des constats horodatés avant `endedAt`; ces constats sont triés et un même horaire n'est stocké qu'une fois. Sans `endedAt`, la fin reste inconnue ; aucune fermeture automatique n'est appliquée. Les anciennes observations avec `ongoing: true` n'ont ni heure de fin ni durée ultérieure inventée.
+
+### Rubriques repliables
+
+Dans les modules, l’historique et les zones/éléments enregistrés sont des rubriques repliées par défaut. Toucher leur titre les ouvre ou les referme. Le rendu des données ne force pas leur ouverture et ne change pas leur état.
+
+### Éléments personnalisés sur la carte corporelle
+
+Un seul élément de catalogue (ex. « Ongles ») peut être rattaché aux deux côtés de la même partie du corps. Le formulaire commun de création/modification propose la partie, les cases droite/gauche et les cases face/dos. Les régions non latéralisées (cou, torse/dos) ne demandent pas de côté. Le rattachement est facultatif et réservé aux zones Rhumato.
+
+- `catalog[].bodyMap` (facultatif) contient `regions` (identifiants de régions) et `surfaces` (`front`/`back`). La validation et les choix de carte sont centralisés dans `src/body-map.js`.
+- `entries[].itemLocations` (facultatif) associe chaque identifiant d'élément aux régions effectivement choisies dans cette observation. Les deux mains peuvent être choisies dans une même saisie, avec un seul élément de catalogue.
+- Le rattachement actuel d'un élément ne déduit aucun côté pour les anciennes observations. Modifier ou retirer le rattachement ne réécrit pas les localisations déjà enregistrées. L'édition conserve les anciens choix, même s'ils ne figurent plus sur la carte actuelle.
+- L'historique et les statistiques utilisent les mêmes libellés de sélection (ex. « Ongles — Main droite »). Le compteur d'observations compte toujours les observations, pas les côtés.
+- L'export JSON conserve les deux champs. Lors d'une collision d'identifiants à l'import, les clés de `itemLocations` sont remappées avec les identifiants du catalogue. Réimporter une ancienne sauvegarde sans rattachement ne duplique pas les éléments dont seul le placement a été enrichi depuis.
+- Tests de régression : `tests/body-map-locations.test.mjs` (bilatéralité, vue, conservation historique, modification ciblée, import/export et idempotence après rattachement).
+
+### Vérification d’interface restant à faire
+
+Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un navigateur local n'a pas pu être exécuté : aucun exécutable Chromium n'est installé et son téléchargement a échoué (archive invalide). Ne pas présenter l'interface mobile comme testée. Vérifier : créer « Ongles » une fois pour les deux mains, choisir face/dos, sélectionner les deux côtés, retirer un seul côté depuis les sélections, sauvegarder/recharger, modifier l'observation, modifier le rattachement et vérifier que l'ancien côté reste intact. Vérifier aussi l'ouverture/fermeture des rubriques Historique et Zones enregistrées. Laurie a autorisé la publication le 18 octobre 2026 après avoir été informée de cette limite ; le contrôle visuel reste à effectuer.
