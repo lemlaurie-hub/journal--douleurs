@@ -49,7 +49,10 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
   - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
 - [x] Ajout/modification d'un élément du catalogue via une logique métier unique.
 - [x] Modification d'une observation depuis son module, avec le même formulaire et sans toucher les champs inchangés.
-- [x] Suivi d'un épisode : première observation horodatée, constats successifs « Encore maintenant », fin facultative avec choix/correction d'une heure passée, durée minimale calculée uniquement jusqu'au dernier constat de présence et fin inconnue sans clôture automatique.
+- [x] Suivi d'un épisode : première observation horodatée, heure capturée à chaque clic « Encore maintenant », constats antidatés ajoutables après la fin, fin facultative avec choix/correction d'une heure passée, durée minimale calculée uniquement jusqu'au dernier constat de présence et fin inconnue sans clôture automatique.
+- [x] Historique et zones/éléments enregistrés repliés par défaut, ouverts à la demande.
+- [x] Rattacher un élément personnalisé à une partie du corps en une fois, avec choix droite/gauche/les deux et face/dos ; conserver le côté dans les observations, statistiques et sauvegardes.
+- [ ] Vérifier visuellement sur mobile le formulaire de rattachement, la sélection bilatérale et les rubriques repliables (publication autorisée malgré l’indisponibilité du navigateur de test).
 - [ ] Historique filtrable et plus compact.
 - [ ] Statistiques améliorées par période et catégorie.
 
@@ -80,4 +83,4 @@ Cette section sert à noter rapidement les idées de Laurie sans les transformer
 
 ## Règle de gestion de cette roadmap
 
-Une idée peut être ajoutée ici immédiatement sans modifier l'application. Passer une idée en développement nécessite ensuite de vérifier le code réel, préciser la règle fonctionnelle si nécessaire, développer, tester puis obtenir l'accord de Laurie avant publication.
+Une idée peut être ajoutée ici immédiatement sans modifier l'application. Passer une idée en développement nécessite de terminer la réflexion commune et d’obtenir l’accord explicite de Laurie pour coder. Après développement et tests, présenter le bilan puis attendre une validation distincte pour publier.
