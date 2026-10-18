@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { finishEntry, getMinimumDurationMs, recordStillPresent, updateEntry } from '../src/entries.js';
+import { finishEntry, getMinimumDurationMs, recordStillPresent, updateEntry, updateEntryEnd } from '../src/entries.js';
 import { calculateStats } from '../src/stats.js';
 
 function makeData(overrides = {}) {
@@ -33,17 +33,63 @@ test('chaque constat ajoute son heure sans créer une nouvelle observation', () 
   assert.equal(getMinimumDurationMs(first), 10 * 60 * 60 * 1000 + 15 * 60 * 1000);
 });
 
-test('une fin explicite est horodatée et clôt le compteur sans supprimer les constats', () => {
+test('la fin constatée ne remplace pas le dernier constat de présence pour la durée minimale', () => {
   const data = makeData();
   recordStillPresent(data, 'episode-1', '2026-10-18T12:00:00.000Z');
   finishEntry(data, 'episode-1', '2026-10-18T13:10:00.000Z');
 
   assert.equal(data.entries[0].endedAt, '2026-10-18T13:10:00.000Z');
   assert.deepEqual(data.entries[0].stillAt, ['2026-10-18T12:00:00.000Z']);
-  assert.equal(getMinimumDurationMs(data.entries[0]), 5 * 60 * 60 * 1000 + 10 * 60 * 1000);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 4 * 60 * 60 * 1000);
   assert.equal(calculateStats(data).ongoingEntries, 0);
   assert.throws(() => recordStillPresent(data, 'episode-1', '2026-10-18T14:00:00.000Z'), /fin a déjà été indiquée/i);
   assert.throws(() => finishEntry(data, 'episode-1', '2026-10-18T14:00:00.000Z'), /fin a déjà été indiquée/i);
+});
+
+test('une fin constatée peut être antidatée après le dernier moment où la présence est confirmée', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: ['2026-10-06T20:00:00.000Z'], note: 'Disparu au réveil'
+  }] });
+
+  finishEntry(data, 'episode-1', '2026-10-07T06:30:00.000Z');
+
+  assert.equal(data.entries[0].endedAt, '2026-10-07T06:30:00.000Z');
+  assert.equal(getMinimumDurationMs(data.entries[0]), 3 * 60 * 60 * 1000 + 16 * 60 * 1000);
+  assert.equal(calculateStats(data).ongoingEntries, 0);
+});
+
+test('sans constat ultérieur, l’heure de fin ne fabrique pas une durée minimale', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: [], note: 'Disparu le lendemain'
+  }] });
+
+  finishEntry(data, 'episode-1', '2026-10-07T06:30:00.000Z');
+
+  assert.equal(getMinimumDurationMs(data.entries[0]), null);
+});
+
+test('corriger une fin déjà enregistrée ne modifie que son horodatage', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: ['2026-10-06T20:00:00.000Z'],
+    endedAt: '2026-10-18T17:15:00.000Z', note: 'Disparu au réveil'
+  }] });
+
+  updateEntryEnd(data, 'episode-1', '2026-10-07T06:30:00.000Z');
+
+  assert.equal(data.entries[0].endedAt, '2026-10-07T06:30:00.000Z');
+  assert.equal(data.entries[0].note, 'Disparu au réveil');
+  assert.deepEqual(data.entries[0].stillAt, ['2026-10-06T20:00:00.000Z']);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 3 * 60 * 60 * 1000 + 16 * 60 * 1000);
+
+  const beforeInvalidEdit = structuredClone(data.entries[0]);
+  assert.throws(() => updateEntryEnd(data, 'episode-1', '2026-10-06T19:00:00.000Z'), /fin ne peut pas précéder/i);
+  assert.deepEqual(data.entries[0], beforeInvalidEdit);
 });
 
 test('les anciennes données restent valides et aucune fin ou durée n’est inventée', () => {
