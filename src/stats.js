@@ -28,7 +28,7 @@ export function calculateStats(data) {
   return {
     totalEntries: data.entries.length,
     activeDays: days.size,
-    ongoingEntries: data.entries.filter(entry => entry.ongoing).length,
+    ongoingEntries: data.entries.filter(entry => entry.ongoing && !entry.endedAt).length,
     topItems
   };
 }
