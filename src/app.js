@@ -1,18 +1,23 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
 import { getBodyMapDetails } from './body-map.js';
-import { createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry } from './entries.js?v=4.2.0';
+import { createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry, updateEntryEnd } from './entries.js?v=4.3.0';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
+  closeFinishDialog,
   beginEntryEdit,
   getCatalogFormInput,
+  getFinishTimestamp,
+  getFinishingEntryId,
   getEditingCatalogId,
   getEditingEntryId,
   getElements,
   getEntryFormInput,
   isEntryFormDirty,
+  isCorrectingEntryEnd,
   openCatalogDialog,
+  openFinishDialog,
   renderAll,
   renderBodyMap,
   resetEntryForm,
@@ -94,11 +99,30 @@ function handleDeleteEntry(entryId) {
 function handleEpisodeAction(action, entryId) {
   try {
     if (action === 'still-present') recordStillPresent(data, entryId);
-    else finishEntry(data, entryId);
+    else {
+      const entry = data.entries.find(row => row.id === entryId);
+      if (entry) openFinishDialog(entry);
+      return;
+    }
     persistAndRender();
-    showToast(action === 'still-present'
-      ? 'Nouveau constat enregistré avec l’heure actuelle.'
-      : 'Fin enregistrée avec l’heure actuelle.');
+    showToast('Nouveau constat enregistré avec l’heure actuelle.');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
+function handleFinishSubmit(event) {
+  event.preventDefault();
+
+  try {
+    const entryId = getFinishingEntryId();
+    const endedAt = getFinishTimestamp();
+    const correctingEnd = isCorrectingEntryEnd();
+    if (correctingEnd) updateEntryEnd(data, entryId, endedAt);
+    else finishEntry(data, entryId, endedAt);
+    closeFinishDialog();
+    persistAndRender();
+    showToast(correctingEnd ? 'Heure de fin corrigée.' : 'Fin constatée enregistrée.');
   } catch (error) {
     showToast(error.message, 'error');
   }
@@ -230,6 +254,8 @@ function registerEvents() {
     button.addEventListener('click', closeCatalogDialog);
   });
   elements.catalogForm.addEventListener('submit', handleCatalogSubmit);
+  elements.finishForm.addEventListener('submit', handleFinishSubmit);
+  elements.cancelFinish.addEventListener('click', closeFinishDialog);
   elements.entryForm.addEventListener('submit', handleEntrySubmit);
   document.querySelector('#export-backup').addEventListener('click', handleExport);
   document.querySelector('#import-backup').addEventListener('change', handleImport);
@@ -248,6 +274,12 @@ function registerEvents() {
     const finishButton = event.target.closest('[data-finish-entry]');
     if (finishButton) {
       handleEpisodeAction('finish', finishButton.dataset.finishEntry);
+      return;
+    }
+    const correctEndButton = event.target.closest('[data-edit-entry-end]');
+    if (correctEndButton) {
+      const entry = data.entries.find(row => row.id === correctEndButton.dataset.editEntryEnd);
+      if (entry) openFinishDialog(entry, { edit: true });
       return;
     }
     const editButton = event.target.closest('[data-edit-entry]');
