@@ -28,6 +28,19 @@ test('exporte et réimporte les données sans altérer les dates, heures et note
   assert.equal(imported.settings.theme, 'system');
 });
 
+test('exporte et réimporte les constats successifs et la fin explicite sans perte', () => {
+  const episode = {
+    ...entry,
+    stillAt: ['2026-09-13T01:15:00.000Z', '2026-09-13T07:45:00.000Z'],
+    endedAt: '2026-09-13T08:10:00.000Z'
+  };
+  const original = { schemaVersion: 1, catalog: [catalogItem], entries: [episode], settings: {} };
+  const backup = createBackup(original);
+  const roundTrip = mergeBackup(emptyData(), JSON.stringify(backup)).data;
+
+  assert.deepEqual(roundTrip.entries[0], episode);
+});
+
 test('réimporter le même fichier n’ajoute aucun doublon', () => {
   const backup = createBackup({
     schemaVersion: 1, catalog: [catalogItem], entries: [entry], settings: { theme: 'system' }
