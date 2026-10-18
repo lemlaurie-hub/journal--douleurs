@@ -8,7 +8,7 @@
   <title>Journal de suivi santé</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.1.0">
+  <link rel="stylesheet" href="./styles.css?v=4.2.0">
 </head>
 <body>
   <header class="app-header">
@@ -81,7 +81,7 @@
           </div></fieldset>
           <div class="form-grid">
             <label class="field"><span>Date et heure</span><input id="occurred-at" name="occurred-at" type="datetime-local" required></label>
-            <label class="checkbox-field"><input id="ongoing" name="ongoing" type="checkbox"><span>Encore maintenant</span></label>
+            <div><label class="checkbox-field"><input id="ongoing" name="ongoing" type="checkbox"><span>Présent à cette heure</span></label><p class="field-help">Cette première heure sert de repère. Dans l’historique, tu pourras ajouter un nouveau constat ou indiquer une fin.</p></div>
           </div>
           <label class="field"><span>Note <small>(facultative)</small></span><textarea id="note" name="note" rows="4" placeholder="Contexte, sensation, déclencheur éventuel…"></textarea></label>
           <div class="form-actions"><button type="submit" id="save-entry" class="button button-primary">Enregistrer</button><button type="button" id="cancel-edit" class="button button-secondary" hidden>Annuler la modification</button></div>
@@ -118,6 +118,6 @@
     </form>
   </dialog>
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
-  <script type="module" src="./src/app.js?v=4.1.2"></script>
+  <script type="module" src="./src/app.js?v=4.2.0"></script>
 </body>
 </html>
