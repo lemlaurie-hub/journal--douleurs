@@ -8,7 +8,7 @@
   <title>Journal de suivi santé</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.2.0">
+  <link rel="stylesheet" href="./styles.css?v=4.3.0">
 </head>
 <body>
   <header class="app-header">
@@ -72,7 +72,56 @@
           <button type="button" class="button button-secondary" data-open-catalog>+ Créer un élément</button>
         </div>
         <form id="entry-form" novalidate>
-          <fieldset><legend>Élément(s) concerné(s)</legend><p class="field-help">Pour corriger une ancienne saisie, coche les bons éléments. La date, l’heure et la note restent inchangées si tu ne les modifies pas.</p><div id="item-choices" class="choice-list"></div></fieldset>
+          <fieldset><legend>Élément(s) concerné(s)</legend><p class="field-help">Tu peux choisir plusieurs zones. Pour corriger une ancienne saisie, décoche ou ajoute les bons éléments.</p>
+            <section id="body-map" class="body-map" hidden aria-label="Carte corporelle Rhumato">
+              <div class="body-map-tabs" role="group" aria-label="Face du corps">
+                <button id="body-map-front" class="button button-secondary is-active" type="button" aria-pressed="true">De face</button>
+                <button id="body-map-back" class="button button-secondary" type="button" aria-pressed="false">De dos</button>
+              </div>
+              <div class="body-figure" aria-label="Choisir une zone du corps">
+                <span class="body-side body-side-left">droite</span><span class="body-side body-side-right">gauche</span>
+                <svg class="body-figure-svg" viewBox="0 0 300 340" role="img" aria-label="Silhouette humaine">
+                  <circle class="body-shape" cx="150" cy="34" r="22" />
+                  <rect class="body-shape" x="137" y="52" width="26" height="22" rx="10" />
+                  <path class="body-shape" d="M112 72 Q150 61 188 72 L177 101 Q172 111 173 126 L174 189 L126 189 L127 126 Q128 111 123 101 Z" />
+                  <path class="body-shape" d="M113 75 Q101 77 96 91 L78 151 Q74 163 81 168 Q88 172 93 160 L111 116 L127 99 Z" />
+                  <path class="body-shape" d="M187 75 Q199 77 204 91 L222 151 Q226 163 219 168 Q212 172 207 160 L189 116 L173 99 Z" />
+                  <path class="body-shape" d="M128 181 L172 181 L169 235 L163 294 Q161 306 151 306 Q142 306 142 294 L143 238 L138 294 Q137 306 127 306 Q117 306 120 294 L127 235 Z" />
+                  <path class="body-shape" d="M120 294 Q131 290 141 298 L134 319 Q129 326 112 325 L99 321 Q96 316 103 313 Z" />
+                  <path class="body-shape" d="M159 298 Q170 290 180 294 L197 313 Q204 316 201 321 L188 325 Q171 326 166 319 Z" />
+                  <circle class="body-joint" cx="111" cy="154" r="7" /><circle class="body-joint" cx="189" cy="154" r="7" />
+                  <circle class="body-joint" cx="130" cy="235" r="7" /><circle class="body-joint" cx="170" cy="235" r="7" />
+                </svg>
+                <div id="body-map-hotspots" class="body-map-hotspots">
+                  <button class="body-hotspot" type="button" data-body-region="neck" data-front-left="50" style="left:50%;top:21%" aria-label="Cou"></button>
+                  <button class="body-hotspot" type="button" data-body-region="shoulder-right" data-front-left="38" style="left:38%;top:31%" aria-label="Épaule droite"></button>
+                  <button class="body-hotspot" type="button" data-body-region="shoulder-left" data-front-left="62" style="left:62%;top:31%" aria-label="Épaule gauche"></button>
+                  <button class="body-hotspot" type="button" data-body-region="trunk" data-front-left="50" style="left:50%;top:43%" aria-label="Torse"></button>
+                  <button class="body-hotspot" type="button" data-body-region="arm-right" data-front-left="26" style="left:26%;top:47%" aria-label="Bras droit"></button>
+                  <button class="body-hotspot" type="button" data-body-region="arm-left" data-front-left="74" style="left:74%;top:47%" aria-label="Bras gauche"></button>
+                  <button class="body-hotspot" type="button" data-body-region="hand-right" data-front-left="20" style="left:20%;top:55%" aria-label="Main droite"></button>
+                  <button class="body-hotspot" type="button" data-body-region="hand-left" data-front-left="80" style="left:80%;top:55%" aria-label="Main gauche"></button>
+                  <button class="body-hotspot" type="button" data-body-region="hip-right" data-front-left="42" style="left:42%;top:59%" aria-label="Hanche droite"></button>
+                  <button class="body-hotspot" type="button" data-body-region="hip-left" data-front-left="58" style="left:58%;top:59%" aria-label="Hanche gauche"></button>
+                  <button class="body-hotspot" type="button" data-body-region="leg-right" data-front-left="43" style="left:43%;top:72%" aria-label="Jambe droite"></button>
+                  <button class="body-hotspot" type="button" data-body-region="leg-left" data-front-left="57" style="left:57%;top:72%" aria-label="Jambe gauche"></button>
+                  <button class="body-hotspot" type="button" data-body-region="foot-right" data-front-left="43" style="left:43%;top:89%" aria-label="Pied droit"></button>
+                  <button class="body-hotspot" type="button" data-body-region="foot-left" data-front-left="57" style="left:57%;top:89%" aria-label="Pied gauche"></button>
+                </div>
+              </div>
+              <div class="body-map-detail" aria-live="polite">
+                <h3 id="body-map-title">Choisis une zone sur le bonhomme</h3>
+                <p id="body-map-help" class="field-help">Les précisions proposées changent entre la vue de face et la vue de dos.</p>
+                <div id="body-map-options" class="body-map-options"></div>
+              </div>
+              <div class="body-map-selected">
+                <strong>Sélection en cours</strong>
+                <div id="body-map-selected-list" class="body-map-selected-list"></div>
+              </div>
+            </section>
+            <button id="manual-choices-toggle" class="button button-secondary manual-choices-toggle" type="button" hidden>Voir toutes les zones du catalogue</button>
+            <div id="item-choices" class="choice-list"></div>
+          </fieldset>
           <fieldset><legend>Niveau de gêne</legend><p class="field-help">Tu peux choisir un niveau, ou deux niveaux voisins si c'est entre les deux.</p><div id="levels" class="level-grid">
             <button type="button" class="level-button" data-level="1" aria-pressed="false">🙂 Supportable</button>
             <button type="button" class="level-button" data-level="2" aria-pressed="false">😕 Gênante</button>
@@ -118,6 +167,6 @@
     </form>
   </dialog>
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
-  <script type="module" src="./src/app.js?v=4.2.0"></script>
+  <script type="module" src="./src/app.js?v=4.3.0"></script>
 </body>
 </html>
