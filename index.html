@@ -8,7 +8,7 @@
   <title>Journal de suivi santé</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=4.4.0">
+  <link rel="stylesheet" href="./styles.css?v=4.5.0">
 </head>
 <body>
   <header class="app-header">
@@ -142,16 +142,16 @@
         <div id="module-stats" class="stats-grid"></div>
       </section>
 
-      <section class="panel" aria-labelledby="history-title">
-        <div class="section-heading"><div><p class="eyebrow">Saisies de ce module</p><h2 id="history-title">Historique</h2></div></div>
+      <details class="panel collapsible-panel" aria-labelledby="history-title">
+        <summary><h2 id="history-title">Historique</h2></summary>
         <div id="module-history" class="history-list"></div>
-      </section>
+      </details>
 
-      <section class="panel" aria-labelledby="catalog-title">
-        <div class="section-heading"><div><p class="eyebrow">Personnalisation</p><h2 id="catalog-title">Éléments de suivi</h2></div></div>
+      <details class="panel collapsible-panel" aria-labelledby="catalog-title">
+        <summary><h2 id="catalog-title">Zones enregistrées</h2></summary>
         <p class="field-help">Modifier la catégorie d’un élément déplace toutes ses observations associées. Pour corriger une seule observation, utilise le bouton « Modifier » dans son historique.</p>
         <div id="catalog-list" class="catalog-list"></div>
-      </section>
+      </details>
     </section>
   </main>
 
@@ -163,18 +163,30 @@
         <option value="rhumatologie">Rhumatologie</option><option value="digestif">Digestif</option><option value="symptomes-evenements">Symptômes / événements</option><option value="neurologique">Neurologique (ancienne catégorie)</option><option value="general">Général</option><option value="autre">Autre</option>
       </select></label>
       <label class="field"><span>Type</span><select id="catalog-kind" required><option value="zone">Zone</option><option value="symptome">Symptôme</option><option value="evenement">Événement</option></select></label>
+      <div id="catalog-body-map" hidden>
+        <label class="field"><span>Partie du corps</span><select id="catalog-body-group"><option value="">Sans rattachement au bonhomme</option></select></label>
+        <fieldset id="catalog-body-sides" hidden><legend>Côté(s)</legend>
+          <label class="checkbox-field"><input id="catalog-side-right" type="checkbox" checked>Droite</label>
+          <label class="checkbox-field"><input id="catalog-side-left" type="checkbox" checked>Gauche</label>
+        </fieldset>
+        <fieldset id="catalog-body-surfaces" hidden><legend>Afficher sur quelle vue ?</legend>
+          <label class="checkbox-field"><input id="catalog-surface-front" type="checkbox" checked>Face</label>
+          <label class="checkbox-field"><input id="catalog-surface-back" type="checkbox" checked>Dos</label>
+        </fieldset>
+        <p class="field-help">Un seul nom suffit pour les deux côtés. Tu choisiras le côté de la douleur sur le bonhomme. Les anciennes observations sans côté resteront sans côté.</p>
+      </div>
       <div class="dialog-actions"><button type="button" class="button button-secondary" data-close-catalog>Annuler</button><button type="submit" id="save-catalog-item" class="button button-primary">Créer</button></div>
     </form>
   </dialog>
   <dialog id="finish-dialog" class="dialog">
     <form id="finish-form" class="dialog-card">
-      <div class="section-heading"><div><p class="eyebrow">Suivi d’épisode</p><h2>Quand as-tu constaté que c’était terminé ?</h2></div></div>
-      <p class="field-help">L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.</p>
-      <label class="field"><span>Date et heure constatées</span><input id="finish-at" name="finish-at" type="datetime-local" required></label>
-      <div class="dialog-actions"><button type="button" id="cancel-finish" class="button button-secondary">Annuler</button><button type="submit" class="button button-primary">Enregistrer la fin constatée</button></div>
+      <div class="section-heading"><div><p class="eyebrow">Suivi d’épisode</p><h2 id="finish-dialog-title">Quand as-tu constaté que c’était terminé ?</h2></div></div>
+      <p class="field-help" id="finish-dialog-help">L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.</p>
+      <label class="field"><span id="finish-at-label">Date et heure constatées</span><input id="finish-at" name="finish-at" type="datetime-local" required></label>
+      <div class="dialog-actions"><button type="button" id="cancel-finish" class="button button-secondary">Annuler</button><button type="submit" id="finish-submit" class="button button-primary">Enregistrer la fin constatée</button></div>
     </form>
   </dialog>
   <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
-  <script type="module" src="./src/app.js?v=4.4.0"></script>
+  <script type="module" src="./src/app.js?v=4.5.0"></script>
 </body>
 </html>
