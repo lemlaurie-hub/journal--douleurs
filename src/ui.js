@@ -33,6 +33,10 @@ const elements = {
   catalogList: document.querySelector('#catalog-list'),
   moduleHistory: document.querySelector('#module-history'),
   catalogDialog: document.querySelector('#catalog-dialog'),
+  finishDialog: document.querySelector('#finish-dialog'),
+  finishForm: document.querySelector('#finish-form'),
+  finishAt: document.querySelector('#finish-at'),
+  cancelFinish: document.querySelector('#cancel-finish'),
   catalogForm: document.querySelector('#catalog-form'),
   catalogDialogTitle: document.querySelector('#catalog-dialog-title'),
   catalogLabel: document.querySelector('#catalog-label'),
@@ -67,6 +71,8 @@ let editingEntry = null;
 let originalDateTimeFieldValue = null;
 let editingCatalogId = null;
 let defaultDateTimeFieldValue = null;
+let finishingEntryId = null;
+let correctingEntryEnd = false;
 
 function createEmptyMessage(text) {
   const p = document.createElement('p');
@@ -186,6 +192,42 @@ export function getEntryFormInput() {
 
 export function getEditingEntryId() {
   return editingEntry?.id || null;
+}
+
+export function openFinishDialog(entry, { edit = false } = {}) {
+  finishingEntryId = entry.id;
+  correctingEntryEnd = edit;
+  const now = new Date().toISOString();
+  const lastPresence = (entry.stillAt || []).at(-1) || entry.occurredAt;
+  elements.finishAt.min = toLocalInputValue(lastPresence);
+  elements.finishAt.max = toLocalInputValue(now);
+  elements.finishAt.value = toLocalInputValue(edit ? entry.endedAt : now);
+  elements.finishDialog.showModal();
+}
+
+export function getFinishingEntryId() {
+  return finishingEntryId;
+}
+
+export function isCorrectingEntryEnd() {
+  return correctingEntryEnd;
+}
+
+export function getFinishTimestamp() {
+  const timestamp = new Date(elements.finishAt.value);
+  if (!elements.finishAt.value || Number.isNaN(timestamp.getTime())) {
+    throw new Error('Choisis une date et une heure valides.');
+  }
+  return timestamp.toISOString();
+}
+
+export function closeFinishDialog() {
+  finishingEntryId = null;
+  correctingEntryEnd = false;
+  elements.finishForm.reset();
+  elements.finishAt.removeAttribute('min');
+  elements.finishAt.removeAttribute('max');
+  elements.finishDialog.close();
 }
 
 export function resetEntryForm() {
@@ -355,7 +397,7 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
       if (entry.endedAt) {
         const end = document.createElement('p');
         end.className = 'episode-end';
-        end.textContent = `Fin indiquée le ${formatLocalDateTime(entry.endedAt)}`;
+        end.textContent = `Fin constatée le ${formatLocalDateTime(entry.endedAt)}`;
         episode.append(end);
       } else {
         const unknown = document.createElement('p');
@@ -368,6 +410,11 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
         const duration = document.createElement('p');
         duration.className = 'episode-duration';
         duration.textContent = durationText;
+        episode.append(duration);
+      } else {
+        const duration = document.createElement('p');
+        duration.className = 'episode-duration';
+        duration.textContent = 'Pas assez de constats pour calculer une durée minimale.';
         episode.append(duration);
       }
       article.append(episode);
@@ -394,6 +441,13 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
         finishButton.dataset.finishEntry = entry.id;
         finishButton.textContent = 'C’est terminé';
         controls.append(stillPresentButton, finishButton);
+      } else if (entry.ongoing && entry.endedAt) {
+        const correctEndButton = document.createElement('button');
+        correctEndButton.type = 'button';
+        correctEndButton.className = 'button button-secondary button-small';
+        correctEndButton.dataset.editEntryEnd = entry.id;
+        correctEndButton.textContent = 'Modifier l’heure de fin';
+        controls.append(correctEndButton);
       }
       const editButton = document.createElement('button');
       editButton.type = 'button';
