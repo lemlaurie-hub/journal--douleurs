@@ -160,6 +160,8 @@ Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il 
 
 Les tests couvrent également la modification d'une observation sans recréer son identifiant ni changer sa date précise, sa note ou ses métadonnées intactes. Ils vérifient le reclassement ciblé et idempotent des éléments V3 nommés exactement « Migraine » et « Migraine ophtalmique ».
 
+Les tests du suivi d'épisode vérifient que chaque action « Encore maintenant » ajoute une heure au même événement, que la durée minimale va de la première observation au dernier constat, que la fin est facultative et explicite, que les anciennes observations restent valides sans durée inventée et qu'aucun constat ne peut être antidaté après un constat plus récent. L'interface ne clôt jamais automatiquement un événement.
+
 ## 10. Publication GitHub
 
 Ne pas utiliser `git push` si l'environnement ne possède pas d'identifiants Git. Ne demander à Laurie ni jeton, ni mot de passe, ni clé SSH.
@@ -241,3 +243,4 @@ L'import V3 sera conçu séparément et ne devra jamais effacer la source V3.
 - Le classement d'un élément du catalogue est global : il déplace toutes les observations liées à cet élément. La correction d'une seule observation passe par son éditeur et ne change que les associations cochées et les champs effectivement modifiés.
 - Les éléments V3 d'identifiants `item-v3-*` et de libellés exacts « Migraine » ou « Migraine ophtalmique » sont classés comme symptômes/événements. Cette migration idempotente ne change pas les observations. Les autres anciennes zones restent à corriger au cas par cas.
 - Le modèle de stockage existant est conservé ; ajouter un module ne nécessite pas de convertir l'historique.
+- Pour un épisode coché « Présent à cette heure », `occurredAt` reste la première observation. Chaque action « Encore maintenant » ajoute un horodatage dans `stillAt`, sans créer une nouvelle observation. La durée minimale constatée se calcule entre `occurredAt` et le dernier constat, ou l'heure de fin explicite `endedAt` lorsqu'elle existe. Sans `endedAt`, la fin reste inconnue ; aucune fermeture automatique n'est appliquée. Les anciennes observations avec `ongoing: true` sont interprétées comme présentes au moment de leur première observation et n'ont ni heure de fin ni durée ultérieure inventée.
