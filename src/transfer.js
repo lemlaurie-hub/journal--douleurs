@@ -157,6 +157,27 @@ function validateData(data) {
     if (entry.note !== undefined && typeof entry.note !== 'string') {
       throw new Error(`Fichier invalide : note incorrecte pour l’observation ${entry.id}.`);
     }
+    const startTime = Date.parse(entry.occurredAt);
+    if (entry.stillAt !== undefined) {
+      if (!Array.isArray(entry.stillAt)) {
+        throw new Error(`Fichier invalide : constats temporels incorrects pour l’observation ${entry.id}.`);
+      }
+      let previousTime = startTime;
+      for (const timestamp of entry.stillAt) {
+        const checkTime = typeof timestamp === 'string' ? Date.parse(timestamp) : Number.NaN;
+        if (!Number.isFinite(checkTime) || checkTime < previousTime) {
+          throw new Error(`Fichier invalide : ordre des constats incorrect pour l’observation ${entry.id}.`);
+        }
+        previousTime = checkTime;
+      }
+    }
+    if (entry.endedAt !== undefined) {
+      const endTime = typeof entry.endedAt === 'string' ? Date.parse(entry.endedAt) : Number.NaN;
+      const lastCheck = entry.stillAt?.length ? Date.parse(entry.stillAt.at(-1)) : startTime;
+      if (!Number.isFinite(endTime) || endTime < lastCheck) {
+        throw new Error(`Fichier invalide : heure de fin incorrecte pour l’observation ${entry.id}.`);
+      }
+    }
     if (entryIds.has(entry.id)) {
       throw new Error(`Fichier invalide : identifiant d’observation répété (${entry.id}).`);
     }
