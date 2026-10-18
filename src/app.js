@@ -1,6 +1,6 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
-import { createEntry, deleteEntry, updateEntry } from './entries.js?v=4.1.2';
+import { createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry } from './entries.js?v=4.2.0';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
@@ -88,6 +88,19 @@ function handleDeleteEntry(entryId) {
   }
 }
 
+function handleEpisodeAction(action, entryId) {
+  try {
+    if (action === 'still-present') recordStillPresent(data, entryId);
+    else finishEntry(data, entryId);
+    persistAndRender();
+    showToast(action === 'still-present'
+      ? 'Nouveau constat enregistré avec l’heure actuelle.'
+      : 'Fin enregistrée avec l’heure actuelle.');
+  } catch (error) {
+    showToast(error.message, 'error');
+  }
+}
+
 function handleExport() {
   try {
     const backup = createBackup(data);
@@ -168,6 +181,16 @@ function registerEvents() {
   });
 
   elements.moduleHistory.addEventListener('click', event => {
+    const stillPresentButton = event.target.closest('[data-still-present-entry]');
+    if (stillPresentButton) {
+      handleEpisodeAction('still-present', stillPresentButton.dataset.stillPresentEntry);
+      return;
+    }
+    const finishButton = event.target.closest('[data-finish-entry]');
+    if (finishButton) {
+      handleEpisodeAction('finish', finishButton.dataset.finishEntry);
+      return;
+    }
     const editButton = event.target.closest('[data-edit-entry]');
     if (editButton) {
       const entry = data.entries.find(row => row.id === editButton.dataset.editEntry);
