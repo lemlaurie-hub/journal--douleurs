@@ -219,6 +219,7 @@ La V4 est une PWA mobile-first avec données locales. Elle démarre volontaireme
 - `src/stats.js` : calculs statistiques communs.
 - `src/transfer.js` : validation, export JSON V4, import JSON V4/V3 et fusion non destructive.
 - `src/ui.js` : rendu de l'interface et orchestration des interactions.
+- `src/body-map.js` : zones anatomiques proposées par la carte Rhumato, différentes selon la face du corps.
 - `src/app.js` : point d'entrée de l'application.
 - `manifest.webmanifest` : métadonnées d'installation PWA.
 - `sw.js` : fonctionnement hors ligne et cache.
@@ -243,4 +244,5 @@ L'import V3 sera conçu séparément et ne devra jamais effacer la source V3.
 - Le classement d'un élément du catalogue est global : il déplace toutes les observations liées à cet élément. La correction d'une seule observation passe par son éditeur et ne change que les associations cochées et les champs effectivement modifiés.
 - Les éléments V3 d'identifiants `item-v3-*` et de libellés exacts « Migraine » ou « Migraine ophtalmique » sont classés comme symptômes/événements. Cette migration idempotente ne change pas les observations. Les autres anciennes zones restent à corriger au cas par cas.
 - Le modèle de stockage existant est conservé ; ajouter un module ne nécessite pas de convertir l'historique.
+- La carte Rhumato recto-verso crée au besoin des zones précises dans le catalogue, puis les coche dans le formulaire courant. Les coches peuvent être retirées depuis le résumé de sélection ; les anciennes entrées ne sont pas modifiées.
 - Pour un épisode coché « Présent à cette heure », `occurredAt` reste la première observation. Chaque action « Encore maintenant » ajoute un horodatage dans `stillAt`, sans créer une nouvelle observation. La durée minimale constatée se calcule entre `occurredAt` et le dernier constat, ou l'heure de fin explicite `endedAt` lorsqu'elle existe. Sans `endedAt`, la fin reste inconnue ; aucune fermeture automatique n'est appliquée. Les anciennes observations avec `ongoing: true` sont interprétées comme présentes au moment de leur première observation et n'ont ni heure de fin ni durée ultérieure inventée.
