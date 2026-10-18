@@ -1,5 +1,6 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
+import { getBodyMapDetails } from './body-map.js';
 import { createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry } from './entries.js?v=4.2.0';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
@@ -13,6 +14,7 @@ import {
   isEntryFormDirty,
   openCatalogDialog,
   renderAll,
+  renderBodyMap,
   resetEntryForm,
   setDefaultDateTime,
   setActivePage,
@@ -26,10 +28,11 @@ import {
 const data = loadData();
 const elements = getElements();
 let currentModule = 'rhumatologie';
+const bodyMapState = { view: 'front', region: null, showAllChoices: false };
 
 function renderCurrentView() {
   try {
-    renderAll(data, currentModule);
+    renderAll(data, currentModule, bodyMapState);
   } catch (error) {
     // Une erreur de rendu ne doit pas laisser tous les boutons sans action.
     // Les données restent en mémoire et dans le stockage local.
@@ -101,6 +104,26 @@ function handleEpisodeAction(action, entryId) {
   }
 }
 
+function handleBodyMapChoice(label) {
+  const item = data.catalog.find(candidate => candidate.family === 'rhumatologie'
+    && candidate.kind === 'zone'
+    && candidate.label.toLocaleLowerCase('fr') === label.toLocaleLowerCase('fr'))
+    || createCatalogItem(data, { label, family: 'rhumatologie', kind: 'zone' });
+
+  // Les nouveaux éléments de la carte deviennent des zones du catalogue.
+  // La création est sauvegardée immédiatement; l'observation, elle, ne l'est
+  // qu'au bouton Enregistrer.
+  if (![...elements.itemChoices.querySelectorAll('input[type="checkbox"]')].some(input => input.value === item.id)) {
+    persistAndRender();
+  }
+
+  const checkbox = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]')]
+    .find(input => input.value === item.id);
+  if (!checkbox) return;
+  checkbox.checked = !checkbox.checked;
+  renderBodyMap(data, currentModule, bodyMapState);
+}
+
 function handleExport() {
   try {
     const backup = createBackup(data);
@@ -167,6 +190,42 @@ function registerEvents() {
     button.addEventListener('click', () => openCatalogDialog({ family: currentModule }));
   });
 
+  elements.bodyMapFront.addEventListener('click', () => {
+    bodyMapState.view = 'front';
+    renderBodyMap(data, currentModule, bodyMapState);
+  });
+  elements.bodyMapBack.addEventListener('click', () => {
+    bodyMapState.view = 'back';
+    renderBodyMap(data, currentModule, bodyMapState);
+  });
+  elements.bodyMap.addEventListener('click', event => {
+    const hotspot = event.target.closest('[data-body-region]');
+    if (hotspot) {
+      bodyMapState.region = hotspot.dataset.bodyRegion;
+      renderBodyMap(data, currentModule, bodyMapState);
+      return;
+    }
+    const choice = event.target.closest('[data-body-map-choice]');
+    if (choice) {
+      handleBodyMapChoice(choice.dataset.bodyMapChoice);
+      return;
+    }
+    const remove = event.target.closest('[data-body-map-remove-item]');
+    if (remove) {
+      const checkbox = [...elements.itemChoices.querySelectorAll('input[type="checkbox"]')]
+        .find(input => input.value === remove.dataset.bodyMapRemoveItem);
+      if (checkbox) checkbox.checked = false;
+      renderBodyMap(data, currentModule, bodyMapState);
+    }
+  });
+  elements.manualChoicesToggle.addEventListener('click', () => {
+    bodyMapState.showAllChoices = !bodyMapState.showAllChoices;
+    renderBodyMap(data, currentModule, bodyMapState);
+  });
+  elements.itemChoices.addEventListener('change', () => {
+    renderBodyMap(data, currentModule, bodyMapState);
+  });
+
   document.querySelectorAll('[data-close-catalog]').forEach(button => {
     button.addEventListener('click', closeCatalogDialog);
   });
@@ -194,7 +253,10 @@ function registerEvents() {
     const editButton = event.target.closest('[data-edit-entry]');
     if (editButton) {
       const entry = data.entries.find(row => row.id === editButton.dataset.editEntry);
-      if (entry) beginEntryEdit(entry, data, currentModule);
+      if (entry) {
+        beginEntryEdit(entry, data, currentModule);
+        renderBodyMap(data, currentModule, bodyMapState);
+      }
       return;
     }
     const deleteButton = event.target.closest('[data-delete-entry]');
