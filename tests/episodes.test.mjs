@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { finishEntry, getMinimumDurationMs, recordStillPresent, updateEntry, updateEntryEnd } from '../src/entries.js';
+import { addPastPresence, finishEntry, getMinimumDurationMs, recordStillPresent, updateEntry, updateEntryEnd } from '../src/entries.js';
 import { calculateStats } from '../src/stats.js';
 
 function makeData(overrides = {}) {
@@ -31,6 +31,64 @@ test('chaque constat ajoute son heure sans créer une nouvelle observation', () 
   assert.equal(first.occurredAt, '2026-10-18T08:00:00.000Z');
   assert.equal(first.note, 'Au réveil');
   assert.equal(getMinimumDurationMs(first), 10 * 60 * 60 * 1000 + 15 * 60 * 1000);
+});
+
+test('un clic sans heure fournie enregistre immédiatement son propre horodatage', () => {
+  const data = makeData();
+  const beforeClick = Date.now();
+  recordStillPresent(data, 'episode-1');
+  const afterClick = Date.now();
+  const savedAt = Date.parse(data.entries[0].stillAt[0]);
+
+  assert.ok(savedAt >= beforeClick && savedAt <= afterClick);
+});
+
+test('un constat passé ajouté à un épisode terminé recalcule la durée minimale sans changer le début ni la fin', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: [], endedAt: '2026-10-07T04:30:00.000Z', note: 'Partie au réveil'
+  }] });
+
+  addPastPresence(data, 'episode-1', '2026-10-06T20:30:00.000Z');
+  addPastPresence(data, 'episode-1', '2026-10-06T20:30:00.000Z');
+
+  assert.equal(data.entries.length, 1);
+  assert.equal(data.entries[0].occurredAt, '2026-10-06T16:44:00.000Z');
+  assert.equal(data.entries[0].endedAt, '2026-10-07T04:30:00.000Z');
+  assert.equal(data.entries[0].note, 'Partie au réveil');
+  assert.deepEqual(data.entries[0].stillAt, ['2026-10-06T20:30:00.000Z']);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 3 * 60 * 60_000 + 46 * 60_000);
+});
+
+test('un constat antidaté s’insère dans l’ordre sans retirer les constats plus récents', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: ['2026-10-06T21:00:00.000Z'], endedAt: '2026-10-07T04:30:00.000Z', note: ''
+  }] });
+
+  addPastPresence(data, 'episode-1', '2026-10-06T20:30:00.000Z');
+
+  assert.deepEqual(data.entries[0].stillAt, [
+    '2026-10-06T20:30:00.000Z',
+    '2026-10-06T21:00:00.000Z'
+  ]);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 4 * 60 * 60_000 + 16 * 60_000);
+});
+
+test('un constat passé doit être après le début et avant la fin, sans mutation en cas de refus', () => {
+  const data = makeData({ entries: [{
+    id: 'episode-1', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-10-06T16:44:00.000Z', ongoing: true,
+    stillAt: [], endedAt: '2026-10-07T04:30:00.000Z', note: 'Partie au réveil'
+  }] });
+  const before = structuredClone(data.entries[0]);
+
+  assert.throws(() => addPastPresence(data, 'episode-1', '2026-10-06T16:44:00.000Z'), /après la première observation/i);
+  assert.deepEqual(data.entries[0], before);
+  assert.throws(() => addPastPresence(data, 'episode-1', '2026-10-07T04:30:00.000Z'), /doit précéder l’heure de fin/i);
+  assert.deepEqual(data.entries[0], before);
 });
 
 test('la fin constatée ne remplace pas le dernier constat de présence pour la durée minimale', () => {
