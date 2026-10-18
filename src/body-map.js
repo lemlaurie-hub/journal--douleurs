@@ -78,3 +78,79 @@ export function getBodyMapDetails(regionId, surface) {
   if (!['front', 'back'].includes(surface)) return [];
   return BODY_MAP_REGIONS[regionId]?.[surface] || [];
 }
+
+// Une partie du corps est choisie une fois, puis ses côtés sont cochés ensemble.
+export const BODY_MAP_GROUPS = {
+  neck: { name: 'Cou', regions: ['neck'] },
+  shoulder: { name: 'Épaule', regions: ['shoulder-right', 'shoulder-left'] },
+  trunk: { name: 'Torse / dos', regions: ['trunk'] },
+  arm: { name: 'Bras', regions: ['arm-right', 'arm-left'] },
+  hand: { name: 'Main', regions: ['hand-right', 'hand-left'] },
+  hip: { name: 'Hanche', regions: ['hip-right', 'hip-left'] },
+  leg: { name: 'Jambe', regions: ['leg-right', 'leg-left'] },
+  foot: { name: 'Pied', regions: ['foot-right', 'foot-left'] }
+};
+
+export function normalizeBodyMap(binding) {
+  if (binding == null) return null;
+  if (!Array.isArray(binding.regions) || !binding.regions.length
+      || binding.regions.some(id => !Object.hasOwn(BODY_MAP_REGIONS, id))) {
+    throw new Error('Choisis au moins un côté ou une partie du corps valide.');
+  }
+  if (!Object.values(BODY_MAP_GROUPS).some(group => binding.regions.every(id => group.regions.includes(id)))) {
+    throw new Error('Choisis une seule partie du corps, avec un ou deux côtés.');
+  }
+  if (!Array.isArray(binding.surfaces) || !binding.surfaces.length
+      || binding.surfaces.some(surface => !['front', 'back'].includes(surface))) {
+    throw new Error('Choisis au moins une vue : face ou dos.');
+  }
+  return {
+    regions: [...new Set(binding.regions)].sort(),
+    surfaces: [...new Set(binding.surfaces)].sort()
+  };
+}
+
+// Le côté appartient à l'observation, pas au seul catalogue actuel. Un ancien
+// enregistrement sans côté reste donc sans côté après un nouveau rattachement.
+export function normalizeItemLocations(locations, itemIds) {
+  if (locations === undefined) return {};
+  if (!locations || typeof locations !== 'object' || Array.isArray(locations)) {
+    throw new Error('Les localisations de l’observation sont invalides.');
+  }
+  const result = {};
+  for (const [itemId, regions] of Object.entries(locations)) {
+    if (!itemIds.includes(itemId) || !Array.isArray(regions) || !regions.length
+        || regions.some(id => !Object.hasOwn(BODY_MAP_REGIONS, id))) {
+      throw new Error('Une localisation ne correspond pas aux éléments de l’observation.');
+    }
+    Object.defineProperty(result, itemId, {
+      value: [...new Set(regions)].sort(), enumerable: true, configurable: true, writable: true
+    });
+  }
+  return result;
+}
+
+export function getEntrySelections(entry) {
+  return (entry.itemIds || []).flatMap(itemId => {
+    const regions = entry.itemLocations?.[itemId];
+    return regions?.length ? regions.map(regionId => ({ itemId, regionId })) : [{ itemId, regionId: '' }];
+  });
+}
+
+export function formatSelectionLabel(item, regionId = '') {
+  const region = BODY_MAP_REGIONS[regionId];
+  return region ? `${item.label} — ${region.name}` : item.label;
+}
+
+export function getBodyMapOptions(catalog, regionId, surface) {
+  const zones = catalog.filter(item => item.family === 'rhumatologie' && item.kind === 'zone');
+  const defaults = getBodyMapDetails(regionId, surface).flatMap(label => {
+    const item = zones.find(candidate => candidate.label.toLocaleLowerCase('fr') === label.toLocaleLowerCase('fr'));
+    // Un rattachement explicite prend le relais de l'ancien classement par nom.
+    return item?.bodyMap ? [] : [{ label, itemId: item?.id || '', regionId: '' }];
+  });
+  const custom = zones.filter(item => item.bodyMap?.regions.includes(regionId)
+    && item.bodyMap.surfaces.includes(surface))
+    .map(item => ({ label: item.label, itemId: item.id, regionId }));
+  return [...defaults, ...custom];
+}
