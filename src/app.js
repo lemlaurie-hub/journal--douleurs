@@ -1,6 +1,6 @@
 import { loadData, saveData } from './storage.js';
 import { createCatalogItem, updateCatalogItem } from './catalog.js';
-import { addPastPresence, createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry, updateEntryEnd } from './entries.js?v=4.4.0';
+import { addPastPresence, createEntry, deleteEntry, finishEntry, recordStillPresent, updateEntry, updateEntryEnd } from './entries.js?v=4.6.0';
 import { createBackup, mergeBackup } from './transfer.js';
 import {
   closeCatalogDialog,
@@ -22,6 +22,7 @@ import {
   renderBodyMap,
   refreshCatalogBodyMapControls,
   reconcileItemChoice,
+  refreshPreviousObservationHint,
   resetEntryForm,
   setDefaultDateTime,
   setActivePage,
@@ -271,6 +272,8 @@ function registerEvents() {
   elements.finishForm.addEventListener('submit', handleFinishSubmit);
   elements.cancelFinish.addEventListener('click', closeFinishDialog);
   elements.entryForm.addEventListener('submit', handleEntrySubmit);
+  // Met à jour l'explication si l'heure de début est antidatée pendant l'édition.
+  elements.occurredAt.addEventListener('input', refreshPreviousObservationHint);
   document.querySelector('#export-backup').addEventListener('click', handleExport);
   document.querySelector('#import-backup').addEventListener('change', handleImport);
 
