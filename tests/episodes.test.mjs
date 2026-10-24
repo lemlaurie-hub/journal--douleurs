@@ -61,6 +61,57 @@ test('un constat passé ajouté à un épisode terminé recalcule la durée mini
   assert.equal(getMinimumDurationMs(data.entries[0]), 3 * 60 * 60_000 + 46 * 60_000);
 });
 
+test('une observation ancienne sans indicateur de suivi accepte des constats passés sans inventer sa fin', () => {
+  const data = makeData({ entries: [{
+    id: 'legacy', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-08-22T13:00:00.000Z', note: 'Depuis 15h environ'
+  }] });
+
+  addPastPresence(data, 'legacy', '2026-08-22T17:42:00.000Z');
+
+  assert.equal(data.entries.length, 1);
+  assert.equal(data.entries[0].ongoing, true);
+  assert.equal(data.entries[0].endedAt, undefined);
+  assert.deepEqual(data.entries[0].stillAt, ['2026-08-22T17:42:00.000Z']);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 4 * 60 * 60_000 + 42 * 60_000);
+  assert.equal(data.entries[0].note, 'Depuis 15h environ');
+});
+
+test('déplacer le début vers une heure antérieure conserve l’ancien repère comme présence constatée', () => {
+  const data = makeData({ entries: [{
+    id: 'legacy', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-08-22T17:42:00.000Z', note: 'Depuis 15h environ'
+  }] });
+
+  updateEntry(data, 'legacy', {
+    itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-08-22T13:00:00.000Z',
+    preservePreviousObservation: true,
+    note: 'Depuis 15h environ'
+  });
+
+  assert.equal(data.entries[0].occurredAt, '2026-08-22T13:00:00.000Z');
+  assert.deepEqual(data.entries[0].stillAt, ['2026-08-22T17:42:00.000Z']);
+  assert.equal(getMinimumDurationMs(data.entries[0]), 4 * 60 * 60_000 + 42 * 60_000);
+});
+
+test('une correction du début peut explicitement ne pas transformer l’ancien horaire en constat', () => {
+  const data = makeData({ entries: [{
+    id: 'legacy', itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-08-22T17:42:00.000Z', note: ''
+  }] });
+
+  updateEntry(data, 'legacy', {
+    itemIds: ['shoulder'], levels: [2],
+    occurredAt: '2026-08-22T13:00:00.000Z',
+    preservePreviousObservation: false,
+    note: ''
+  });
+
+  assert.deepEqual(data.entries[0].stillAt || [], []);
+  assert.equal(getMinimumDurationMs(data.entries[0]), null);
+});
+
 test('un constat antidaté s’insère dans l’ordre sans retirer les constats plus récents', () => {
   const data = makeData({ entries: [{
     id: 'episode-1', itemIds: ['shoulder'], levels: [2],
