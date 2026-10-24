@@ -82,7 +82,16 @@ export function updateEntry(data, entryId, input) {
   const occurredAt = normalizeOccurredAt(input.occurredAt);
   const submittedNote = String(input.note ?? '');
 
-  validateEpisodeTimeline({ ...entry, occurredAt });
+  // Si le premier horaire est antidaté, l'ancien horaire reste un constat
+  // explicite de présence. La case du formulaire ne permet d'écarter ce repère
+  // que si l'ancien horaire était une erreur de saisie.
+  const preservePrevious = input.preservePreviousObservation !== false
+    && Date.parse(occurredAt) < Date.parse(entry.occurredAt);
+  const stillAt = preservePrevious
+    ? [...new Set([...(entry.stillAt || []), normalizeOccurredAt(entry.occurredAt)])]
+      .sort((a, b) => Date.parse(a) - Date.parse(b))
+    : entry.stillAt;
+  validateEpisodeTimeline({ ...entry, occurredAt, stillAt });
 
   // Une reclassification ne doit pas altérer les secondes/millisecondes ni
   // les espaces d'une note ancienne si l'utilisatrice ne les a pas modifiés.
@@ -94,9 +103,10 @@ export function updateEntry(data, entryId, input) {
     itemIds,
     levels,
     occurredAt: occurredAt === entry.occurredAt ? entry.occurredAt : occurredAt,
-    ongoing: Boolean(input.ongoing) || Boolean(entry.stillAt?.length || entry.endedAt),
+    ongoing: Boolean(input.ongoing) || Boolean(stillAt?.length || entry.endedAt),
     note
   });
+  if (preservePrevious) entry.stillAt = stillAt;
   if (Object.keys(itemLocations).length) entry.itemLocations = itemLocations;
   else delete entry.itemLocations;
   return entry;
@@ -106,7 +116,6 @@ export function updateEntry(data, entryId, input) {
 export function recordStillPresent(data, entryId, observedAt = new Date().toISOString()) {
   const entry = data.entries.find(candidate => candidate.id === entryId);
   if (!entry) throw new Error('Cette observation n’existe plus.');
-  if (!entry.ongoing) throw new Error('Cette observation n’a pas été signalée comme présente à l’enregistrement.');
   if (entry.endedAt) throw new Error('Une fin a déjà été indiquée pour cet événement.');
 
   const timestamp = normalizeOccurredAt(observedAt);
@@ -118,14 +127,17 @@ export function recordStillPresent(data, entryId, observedAt = new Date().toISOS
   }
   if (!stillAt.includes(timestamp)) stillAt.push(timestamp);
   entry.stillAt = stillAt;
+  entry.ongoing = true;
   return entry;
 }
 
-/** Ajoute après coup un constat de présence à un épisode déjà terminé. */
+/**
+ * Ajoute un constat passé à toute observation, même importée ou sans fin.
+ * La fin reste inconnue tant qu'aucune heure de fin n'a été saisie.
+ */
 export function addPastPresence(data, entryId, observedAt) {
   const entry = data.entries.find(candidate => candidate.id === entryId);
   if (!entry) throw new Error('Cette observation n’existe plus.');
-  if (!entry.ongoing || !entry.endedAt) throw new Error('Ce constat passé concerne uniquement un événement terminé.');
 
   const timestamp = normalizeOccurredAt(observedAt);
   const stillAt = [...(entry.stillAt || [])].map(normalizeOccurredAt);
@@ -136,15 +148,20 @@ export function addPastPresence(data, entryId, observedAt) {
   if (new Date(timestamp) <= new Date(entry.occurredAt)) {
     throw new Error('Le constat passé doit être après la première observation.');
   }
-  if (new Date(timestamp) >= new Date(entry.endedAt)) {
+  if (Date.parse(timestamp) > Date.now()) {
+    throw new Error('Un constat passé ne peut pas être dans le futur.');
+  }
+  if (entry.endedAt && new Date(timestamp) >= new Date(entry.endedAt)) {
     throw new Error('Le constat de présence doit précéder l’heure de fin.');
   }
 
+  // Réimporter la même heure ne crée pas de doublon; les constats restent triés.
   if (!stillAt.includes(timestamp)) {
     stillAt.push(timestamp);
     stillAt.sort((a, b) => new Date(a) - new Date(b));
   }
   entry.stillAt = stillAt;
+  entry.ongoing = true;
   return entry;
 }
 
@@ -152,7 +169,6 @@ export function addPastPresence(data, entryId, observedAt) {
 export function finishEntry(data, entryId, endedAt = new Date().toISOString()) {
   const entry = data.entries.find(candidate => candidate.id === entryId);
   if (!entry) throw new Error('Cette observation n’existe plus.');
-  if (!entry.ongoing) throw new Error('Cette observation n’a pas été signalée comme présente à l’enregistrement.');
   if (entry.endedAt) throw new Error('Une fin a déjà été indiquée pour cet événement.');
 
   const timestamp = normalizeOccurredAt(endedAt);
@@ -160,6 +176,7 @@ export function finishEntry(data, entryId, endedAt = new Date().toISOString()) {
   // peut pas précéder un constat explicite où l'événement était encore là.
   validateEpisodeTimeline({ ...entry, endedAt: timestamp });
   entry.endedAt = timestamp;
+  entry.ongoing = true;
   return entry;
 }
 
@@ -167,17 +184,18 @@ export function finishEntry(data, entryId, endedAt = new Date().toISOString()) {
 export function updateEntryEnd(data, entryId, endedAt) {
   const entry = data.entries.find(candidate => candidate.id === entryId);
   if (!entry) throw new Error('Cette observation n’existe plus.');
-  if (!entry.ongoing || !entry.endedAt) throw new Error('Aucune fin constatée ne peut être corrigée pour cette observation.');
+  if (!entry.endedAt) throw new Error('Aucune fin constatée ne peut être corrigée pour cette observation.');
 
   const timestamp = normalizeOccurredAt(endedAt);
   validateEpisodeTimeline({ ...entry, endedAt: timestamp });
   entry.endedAt = timestamp;
+  entry.ongoing = true;
   return entry;
 }
 
 /** Durée minimale prouvée entre le premier et le dernier constat de présence. */
 export function getMinimumDurationMs(entry) {
-  if (!entry?.ongoing) return null;
+  if (!entry) return null;
   const lastKnownAt = (entry.stillAt || []).at(-1);
   if (!lastKnownAt) return null;
   const duration = new Date(lastKnownAt).getTime() - new Date(entry.occurredAt).getTime();
