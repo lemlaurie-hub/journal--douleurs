@@ -1,6 +1,6 @@
 import { getFamilyLabel, getKindLabel } from './catalog.js';
 import { BODY_MAP_REGIONS, BODY_MAP_GROUPS, getBodyMapOptions, getEntrySelections, formatSelectionLabel } from './body-map.js';
-import { formatLevelRange, getMinimumDurationMs } from './entries.js?v=4.4.0';
+import { formatLevelRange, getMinimumDurationMs } from './entries.js?v=4.6.0';
 import { calculateStats } from './stats.js';
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -26,7 +26,9 @@ const elements = {
   manualChoicesToggle: document.querySelector('#manual-choices-toggle'),
   levels: document.querySelector('#levels'),
   occurredAt: document.querySelector('#occurred-at'),
-  ongoing: document.querySelector('#ongoing'),
+  preservePreviousGroup: document.querySelector('#preserve-previous-group'),
+  preservePrevious: document.querySelector('#preserve-previous'),
+  preservePreviousLabel: document.querySelector('#preserve-previous-label'),
   note: document.querySelector('#note'),
   saveEntry: document.querySelector('#save-entry'),
   cancelEdit: document.querySelector('#cancel-edit'),
@@ -191,15 +193,24 @@ export function isEntryFormDirty() {
   const occurredAt = elements.occurredAt.value;
 
   if (!editingEntry) {
-    return itemIds.length > 0 || levels.length > 0 || elements.ongoing.checked
+    return itemIds.length > 0 || levels.length > 0
       || note.length > 0 || occurredAt !== defaultDateTimeFieldValue;
   }
 
   return JSON.stringify(selectedItemChoices().map(selectionKey).sort()) !== JSON.stringify(getEntrySelections(editingEntry).map(selectionKey).sort())
     || JSON.stringify(levels) !== JSON.stringify(editingEntry.levels || [])
     || occurredAt !== originalDateTimeFieldValue
-    || elements.ongoing.checked !== Boolean(editingEntry.ongoing)
     || note !== String(editingEntry.note ?? '');
+}
+
+/** Explique quel constat sera préservé lorsqu'on avance le premier repère. */
+export function refreshPreviousObservationHint() {
+  const earlier = editingEntry && Date.parse(elements.occurredAt.value) < Date.parse(editingEntry.occurredAt);
+  elements.preservePreviousGroup.hidden = !earlier;
+  if (earlier) {
+    elements.preservePreviousLabel.textContent =
+      `Conserver le ${formatLocalDateTime(editingEntry.occurredAt)} comme constat de présence`;
+  }
 }
 
 export function getEntryFormInput() {
@@ -222,7 +233,8 @@ export function getEntryFormInput() {
     itemLocations,
     levels,
     occurredAt,
-    ongoing: elements.ongoing.checked,
+    ongoing: Boolean(editingEntry?.ongoing),
+    preservePreviousObservation: elements.preservePrevious.checked,
     note: elements.note.value
   };
 }
@@ -239,11 +251,15 @@ export function openFinishDialog(entry, { edit = false, addPresence = false } = 
   const lastPresence = (entry.stillAt || []).at(-1) || entry.occurredAt;
   if (addPresence) {
     elements.finishTitle.textContent = 'Quand as-tu constaté que c’était encore présent ?';
-    elements.finishHelp.textContent = 'Ajoute un constat passé à cet événement. Il doit se situer après la première observation et avant la fin constatée.';
+    elements.finishHelp.textContent = entry.endedAt
+      ? 'Choisis un moment après le premier repère et avant la fin constatée.'
+      : 'Choisis un moment passé après le premier repère. Tu peux laisser la fin inconnue.';
     elements.finishLabel.textContent = 'Date et heure du constat';
     elements.finishSubmit.textContent = 'Ajouter ce constat';
     elements.finishAt.min = toLocalInputValue(new Date(new Date(entry.occurredAt).getTime() + 60_000));
-    elements.finishAt.max = toLocalInputValue(new Date(new Date(entry.endedAt).getTime() - 60_000));
+    // À la minute près : strictement avant une fin, ou au plus tard maintenant.
+    const latest = entry.endedAt ? Math.min(Date.now(), Date.parse(entry.endedAt) - 1) : Date.now();
+    elements.finishAt.max = toLocalInputValue(new Date(latest));
     elements.finishAt.value = '';
   } else {
     elements.finishTitle.textContent = edit
@@ -297,7 +313,8 @@ export function resetEntryForm() {
   editingEntry = null;
   originalDateTimeFieldValue = null;
   elements.entryForm.reset();
-  elements.ongoing.disabled = false;
+  elements.preservePrevious.checked = true;
+  refreshPreviousObservationHint();
   elements.levels.querySelectorAll('.level-button').forEach(button => {
     button.classList.remove('is-selected');
     button.setAttribute('aria-pressed', 'false');
@@ -320,8 +337,8 @@ export function beginEntryEdit(entry, data, moduleId) {
 
   originalDateTimeFieldValue = toLocalInputValue(entry.occurredAt);
   elements.occurredAt.value = originalDateTimeFieldValue;
-  elements.ongoing.checked = Boolean(entry.ongoing);
-  elements.ongoing.disabled = Boolean(entry.stillAt?.length || entry.endedAt);
+  elements.preservePrevious.checked = true;
+  refreshPreviousObservationHint();
   elements.note.value = String(entry.note ?? '');
   elements.saveEntry.textContent = 'Enregistrer les corrections';
   elements.cancelEdit.hidden = false;
@@ -475,7 +492,7 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
     level.className = 'history-level';
     level.textContent = formatLevelRange(entry.levels);
     article.append(header, level);
-    if (entry.ongoing) {
+    if (entry.ongoing || entry.stillAt?.length || entry.endedAt) {
       const episode = document.createElement('div');
       episode.className = 'episode-status';
       const firstCheck = document.createElement('p');
@@ -522,7 +539,14 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
     if (actions) {
       const controls = document.createElement('div');
       controls.className = 'history-actions';
-      if (entry.ongoing && !entry.endedAt) {
+      // Toutes les observations, y compris V3, peuvent recevoir un constat passé.
+      const addPresenceButton = document.createElement('button');
+      addPresenceButton.type = 'button';
+      addPresenceButton.className = 'button button-secondary button-small';
+      addPresenceButton.dataset.addPresenceEntry = entry.id;
+      addPresenceButton.textContent = 'Ajouter un constat passé';
+      controls.append(addPresenceButton);
+      if (!entry.endedAt) {
         const stillPresentButton = document.createElement('button');
         stillPresentButton.type = 'button';
         stillPresentButton.className = 'button button-secondary button-small';
@@ -535,18 +559,13 @@ function renderHistory(data, target, { moduleId = null, limit = Infinity, action
         finishButton.dataset.finishEntry = entry.id;
         finishButton.textContent = 'C’est terminé';
         controls.append(stillPresentButton, finishButton);
-      } else if (entry.ongoing && entry.endedAt) {
-        const addPresenceButton = document.createElement('button');
-        addPresenceButton.type = 'button';
-        addPresenceButton.className = 'button button-secondary button-small';
-        addPresenceButton.dataset.addPresenceEntry = entry.id;
-        addPresenceButton.textContent = 'Ajouter un constat passé';
+      } else {
         const correctEndButton = document.createElement('button');
         correctEndButton.type = 'button';
         correctEndButton.className = 'button button-secondary button-small';
         correctEndButton.dataset.editEntryEnd = entry.id;
         correctEndButton.textContent = 'Modifier l’heure de fin';
-        controls.append(addPresenceButton, correctEndButton);
+        controls.append(correctEndButton);
       }
       const editButton = document.createElement('button');
       editButton.type = 'button';
