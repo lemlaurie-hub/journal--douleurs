@@ -84,3 +84,19 @@ Cette section sert à noter rapidement les idées de Laurie sans les transformer
 ## Règle de gestion de cette roadmap
 
 Une idée peut être ajoutée ici immédiatement sans modifier l'application. Passer une idée en développement nécessite de terminer la réflexion commune et d’obtenir l’accord explicite de Laurie pour coder. Après développement et tests, présenter le bilan puis attendre une validation distincte pour publier.
+
+
+
+## Digestif — reprise du 26 octobre 2026
+
+Voir `docs/CAHIER_DES_CHARGES_DIGESTIF.md` et `docs/BILAN_LOT_1.md`.
+
+- [x] Lot 1 développé localement : transit, Bristol obligatoire, accidents, conditions et jours sans passage.
+- [x] Sauvegardes format 2 avec lecture des anciennes versions et tests de non-régression.
+- [ ] Contrôle de l'interface dans un navigateur réel, téléphone Android et hors ligne.
+- [x] Illustrations validées par Laurie le 26 octobre 2026.
+- [x] Publication du lot 1 autorisée le 26 octobre 2026 pour tests ; vérifier le déploiement GitHub Pages.
+- [ ] Lot 2 : symptômes digestifs et épisodes indépendants par zone lors d'une saisie commune.
+- [ ] Lot 3 : historique commun et constats éditables.
+- [ ] Lot 4 : synthèses et PDF médical.
+- [ ] Lot 5 : étude et réalisation des rappels.

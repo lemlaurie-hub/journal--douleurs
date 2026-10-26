@@ -177,6 +177,7 @@ export function setActivePage(page, moduleId = null) {
     return;
   }
 
+  document.querySelector("#digestive-panel").hidden = moduleId !== "digestif";
   const module = MODULES[moduleId];
   elements.moduleTitle.textContent = module.title;
   elements.moduleDescription.textContent = module.description;
@@ -953,3 +954,4 @@ export function renderAll(
   renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
   renderCatalog(data, moduleId);
 }
+

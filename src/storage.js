@@ -1,4 +1,5 @@
 import { reclassifyKnownV3Items } from "./catalog.js";
+import { validateDigestive } from "./digestive.js";
 
 // Couche de stockage unique de la V4.
 // Toute lecture/écriture des données locales passe par ce fichier.
@@ -7,6 +8,9 @@ import { reclassifyKnownV3Items } from "./catalog.js";
 // la base historique de l'ancienne application.
 const STORAGE_KEY = "journalSante.v4";
 const SCHEMA_VERSION = 1;
+// Une erreur de lecture bloque les écritures jusqu'au prochain chargement réussi.
+// Le JSON original reste ainsi récupérable au lieu d'être remplacé par une base vide.
+let storageReadFailed = false;
 
 /** Valeurs par défaut d'une installation sans données V4. */
 function createEmptyData() {
@@ -22,23 +26,23 @@ function createEmptyData() {
 
 /** Lit, normalise et applique uniquement les migrations additives connues. */
 export function loadData() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-
-  if (!raw) {
-    return createEmptyData();
-  }
-
+  storageReadFailed = false;
   try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return createEmptyData();
     const parsed = JSON.parse(raw);
 
-    // Pour cette première V4, on refuse silencieusement de mélanger
-    // un format inconnu avec les données actuelles.
+    // Un format inconnu bloque toute écriture : ne pas remplacer l’historique.
     if (parsed.schemaVersion !== SCHEMA_VERSION) {
       console.warn("Version de données inconnue :", parsed.schemaVersion);
-      return createEmptyData();
+      throw new Error("Version de données non prise en charge.");
+    }
+    if (!Array.isArray(parsed.catalog) || !Array.isArray(parsed.entries)) {
+      throw new Error("Catalogue ou historique illisible.");
     }
 
     const data = {
+      ...parsed,
       schemaVersion: SCHEMA_VERSION,
       catalog: Array.isArray(parsed.catalog) ? parsed.catalog : [],
       entries: Array.isArray(parsed.entries) ? parsed.entries : [],
@@ -47,6 +51,7 @@ export function loadData() {
           ? parsed.settings
           : { theme: "system" },
     };
+    validateDigestive(data.digestive);
 
     // Correction additive et idempotente : les migraines exactes importées de
     // la V3 deviennent des symptômes. Les observations et leurs dates restent intactes.
@@ -64,6 +69,7 @@ export function loadData() {
     }
     return data;
   } catch (error) {
+    storageReadFailed = true;
     console.error("Impossible de lire les données locales.", error);
     return createEmptyData();
   }
@@ -71,7 +77,12 @@ export function loadData() {
 
 /** Écrit une forme de données stable sans toucher à la clé de la V3. */
 export function saveData(data) {
+  if (storageReadFailed) {
+    throw new Error("La lecture des données a échoué. Enregistrement bloqué pour préserver l’historique : recharge l’application après récupération de la sauvegarde.");
+  }
+  validateDigestive(data.digestive);
   const safeData = {
+    ...data,
     schemaVersion: SCHEMA_VERSION,
     catalog: Array.isArray(data.catalog) ? data.catalog : [],
     entries: Array.isArray(data.entries) ? data.entries : [],
@@ -88,3 +99,8 @@ export function saveData(data) {
 export function getStorageKey() {
   return STORAGE_KEY;
 }
+
+export function hasStorageReadError() {
+  return storageReadFailed;
+}
+

@@ -14,7 +14,7 @@
     <title>Journal de suivi santé</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=4.5.0" />
+    <link rel="stylesheet" href="./styles.css?v=4.7.0" />
   </head>
   <body>
     <!-- En-tête commun aux pages d'accueil et aux modules. -->
@@ -82,7 +82,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Vue d'ensemble</p>
-              <h2 id="home-stats-title">Suivi global</h2>
+              <h2 id="home-stats-title">Douleurs et symptômes</h2>
             </div>
           </div>
           <div id="home-stats" class="stats-grid"></div>
@@ -92,7 +92,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Toutes catégories</p>
-              <h2 id="recent-title">Dernières observations</h2>
+              <h2 id="recent-title">Dernières douleurs et symptômes</h2>
             </div>
           </div>
           <div id="home-history" class="history-list"></div>
@@ -142,6 +142,42 @@
           <p class="eyebrow">Module de suivi</p>
           <h2 id="module-title"></h2>
           <p id="module-description" class="field-help"></p>
+        </section>
+
+        <!-- Transit : les formulaires partagent le moteur et les sauvegardes V4. -->
+        <section id="digestive-panel" class="panel" hidden aria-labelledby="transit-heading">
+          <h2 id="transit-heading">Suivi digestif</h2>
+          <div class="digestive-actions">
+            <button id="transit-open-passage" class="button button-primary" type="button">Passage aux toilettes</button>
+            <button id="transit-open-accident" class="button button-secondary" type="button">Ça s’est échappé</button>
+            <button id="transit-open-symptom" class="button button-secondary" type="button">Symptôme digestif</button>
+            <button id="transit-open-history" class="button button-secondary" type="button">Historique et rapports</button>
+          </div>
+          <p class="field-help">Les symptômes utilisent encore la saisie générale ci-dessous. Les rapports médicaux arriveront dans un prochain lot.</p>
+          <fieldset>
+            <legend>Journée sans passage aux toilettes</legend>
+            <label class="field"><span>Journée à renseigner</span><input id="transit-day" type="date" required></label>
+            <p id="transit-day-status" role="status"></p>
+            <div class="form-actions">
+              <button id="transit-confirm-none" type="button" class="button button-secondary">Aucun passage ce jour</button>
+              <button id="transit-clear-none" type="button" class="button button-secondary" hidden>Annuler cette confirmation</button>
+            </div>
+            <p class="field-help">Un accident reste à enregistrer séparément. Une journée sans réponse reste inconnue.</p>
+          </fieldset>
+          <details id="transit-history-details" class="collapsible-panel">
+            <summary><h3>Historique du transit</h3></summary>
+            <div id="transit-history" class="history-list"></div>
+          </details>
+          <details class="collapsible-panel">
+            <summary><h3>Personnaliser les conditions</h3></summary>
+            <p class="field-help">Renommer ou désactiver une condition conserve son ancien nom dans les passages déjà enregistrés.</p>
+            <div id="transit-condition-list" class="catalog-list"></div>
+            <form id="transit-condition-form">
+              <label class="field"><span>Nom de la condition</span><input id="transit-condition-label" required maxlength="160"></label>
+              <button id="transit-condition-save" type="submit" class="button button-secondary">Ajouter</button>
+              <button id="transit-condition-cancel" type="button" class="button button-secondary" hidden>Annuler</button>
+            </form>
+          </details>
         </section>
 
         <section class="panel" aria-labelledby="entry-title">
@@ -516,6 +552,40 @@
       </section>
     </main>
 
+    <dialog id="transit-dialog" class="dialog transit-dialog">
+      <form id="transit-form" class="dialog-card">
+        <h2 id="transit-title">Passage aux toilettes</h2>
+        <p id="transit-error" role="alert" class="transit-error"></p>
+        <label class="field"><span>Date et heure</span><input id="transit-at" type="datetime-local" required></label>
+        <fieldset>
+          <legend>Aspect des selles — Bristol (obligatoire)</legend>
+          <p class="field-help">Choisis un type, ou deux si nécessaire. Touche la ligne pour sélectionner ; « Agrandir » ouvre le visuel.</p>
+          <div id="transit-bristol"></div>
+          <fieldset id="transit-mode-group" hidden>
+            <legend>Que représentent ces deux types ?</legend>
+            <label class="checkbox-field"><input id="transit-mode-intermediate" name="transit-mode" type="radio" value="intermediate"><span>Aspect intermédiaire entre deux types voisins</span></label>
+            <label class="checkbox-field"><input id="transit-mode-distinct" name="transit-mode" type="radio" value="distinct"><span>Deux aspects réellement présents</span></label>
+          </fieldset>
+        </fieldset>
+        <div id="transit-passage-fields">
+          <fieldset><legend>Conditions (facultatives)</legend><div id="transit-conditions"></div></fieldset>
+          <label class="field"><span>Douleur pendant l’évacuation : <output id="transit-pain-value" for="transit-pain">0 / 10</output></span><input id="transit-pain" type="range" min="0" max="10" step="1" value="0"></label>
+        </div>
+        <label class="field"><span>Commentaire (facultatif)</span><textarea id="transit-note" rows="3" placeholder="Circonstances, aliments, sensations…"></textarea></label>
+        <div class="form-actions">
+          <button type="submit" class="button button-primary">Enregistrer</button>
+          <button id="transit-close" type="button" class="button button-secondary">Annuler</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="bristol-image-dialog" class="dialog">
+      <div class="dialog-card">
+        <h2 id="bristol-image-description"></h2>
+        <img id="bristol-image" class="bristol-enlarged" alt="">
+        <button id="bristol-image-close" type="button" class="button button-secondary">Fermer l’illustration</button>
+      </div>
+    </dialog>
+
     <!-- Fenêtres modales partagées pour le catalogue et les heures d'épisode. -->
     <dialog id="catalog-dialog" class="dialog">
       <form id="catalog-form" method="dialog" class="dialog-card">
@@ -669,6 +739,7 @@
     </dialog>
     <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
     <!-- Le point d'entrée relie les interactions à la logique métier. -->
-    <script type="module" src="./src/app.js?v=4.6.0"></script>
+    <script type="module" src="./src/app.js?v=4.7.0"></script>
   </body>
 </html>
+

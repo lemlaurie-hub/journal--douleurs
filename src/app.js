@@ -1,4 +1,5 @@
-import { loadData, saveData } from "./storage.js";
+import { setupDigestive, renderDigestive } from "./digestive-ui.js";
+import { loadData, saveData, hasStorageReadError, getStorageKey } from "./storage.js";
 import { createCatalogItem, updateCatalogItem } from "./catalog.js";
 import {
   addPastPresence,
@@ -52,6 +53,7 @@ const bodyMapState = { view: "front", region: null, showAllChoices: false };
 function renderCurrentView() {
   try {
     renderAll(data, currentModule, bodyMapState);
+    renderDigestive();
   } catch (error) {
     // Une erreur de rendu ne doit pas laisser tous les boutons sans action.
     // Les données restent en mémoire et dans le stockage local.
@@ -191,8 +193,13 @@ function handleBodyMapChoice(label, itemId = "", regionId = "") {
 // Les sauvegardes passent par le même moteur de validation/fusion que les tests.
 function handleExport() {
   try {
-    const backup = createBackup(data);
-    const file = new Blob([JSON.stringify(backup, null, 2)], {
+    // En cas de lecture impossible, télécharger la source intacte plutôt
+    // qu'une sauvegarde vide. Aucun octet n'est écrit dans le stockage.
+    const content = hasStorageReadError()
+      ? localStorage.getItem(getStorageKey())
+      : JSON.stringify(createBackup(data), null, 2);
+    if (content === null) throw new Error("Aucune source locale à récupérer.");
+    const file = new Blob([content], {
       type: "application/json",
     });
     const url = URL.createObjectURL(file);
@@ -216,19 +223,21 @@ async function handleImport(event) {
     const content = await file.text();
     const result = mergeBackup(data, content);
     const confirmed = window.confirm(
-      `Ajouter ${result.entriesAdded} observation(s) et ${result.catalogAdded} élément(s) ?\n\n` +
+      `Ajouter ${result.entriesAdded} observation(s), ${result.catalogAdded} élément(s), ${result.digestiveAdded} transit(s) et ${result.daysAdded} journée(s) sans passage ?\n\n` +
         "Les données déjà présentes seront conservées. Aucune donnée ne sera effacée.",
     );
     if (!confirmed) return;
 
     // La fusion est calculée et validée avant cette unique écriture locale.
+    saveData(result.data);
     data.schemaVersion = result.data.schemaVersion;
     data.catalog = result.data.catalog;
     data.entries = result.data.entries;
     data.settings = result.data.settings;
-    persistAndRender();
+    if (result.data.digestive) data.digestive = result.data.digestive;
+    renderCurrentView();
     showToast(
-      `Import terminé : ${result.entriesAdded} observation(s), ${result.catalogAdded} élément(s) ajouté(s).`,
+      `Import terminé : ${result.entriesAdded} observation(s), ${result.catalogAdded} élément(s), ${result.digestiveAdded} transit(s) ajouté(s).`,
     );
   } catch (error) {
     showToast(
@@ -433,6 +442,14 @@ if (
 
 // Les contrôles sont branchés avant le rendu : une erreur liée à l’affichage
 // ne transforme plus tout l’écran d’accueil en page inerte.
+setupDigestive(data, persistAndRender, showToast);
+if (hasStorageReadError()) {
+  const warning = document.createElement("p");
+  warning.className = "panel transit-error";
+  warning.setAttribute("role", "alert");
+  warning.textContent = "L’historique local n’a pas pu être lu. Les enregistrements sont bloqués pour le protéger. Ne te fie pas aux compteurs affichés. Le bouton de sauvegarde permet de récupérer la source enregistrée.";
+  document.querySelector("main").prepend(warning);
+}
 registerEvents();
 registerServiceWorker();
 
@@ -444,3 +461,4 @@ if (currentModule !== "rhumatologie") {
   }
 }
 renderCurrentView();
+

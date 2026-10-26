@@ -262,3 +262,22 @@ Un seul élément de catalogue (ex. « Ongles ») peut être rattaché aux deux 
 ### Vérification d’interface restant à faire
 
 Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un navigateur local n'a pas pu être exécuté : aucun exécutable Chromium n'est installé et son téléchargement a échoué (archive invalide). Ne pas présenter l'interface mobile comme testée. Vérifier : créer « Ongles » une fois pour les deux mains, choisir face/dos, sélectionner les deux côtés, retirer un seul côté depuis les sélections, sauvegarder/recharger, modifier l'observation, modifier le rattachement et vérifier que l'ancien côté reste intact. Vérifier aussi l'ouverture/fermeture des rubriques Historique et Zones enregistrées. Laurie a autorisé la publication le 18 octobre 2026 après avoir été informée de cette limite ; le contrôle visuel reste à effectuer.
+
+
+
+## Lot 1 Digestif — développement local du 26 octobre 2026
+
+État : publication autorisée le 26 octobre 2026 pour tests par Laurie ; moteur testé, contrôle Android restant à faire. Le cahier des charges et les arbitrages sont dans `docs/CAHIER_DES_CHARGES_DIGESTIF.md`.
+
+- `src/digestive.js` : validation Bristol, commandes de transit, conditions, jours et fusion additive.
+- `src/digestive-ui.js` : un seul éditeur création/correction, historique transit, jours sans passage et conditions.
+- `digestive` est une extension racine optionnelle du schéma 1 : `{version:1, events, conditions, days}`. Les anciennes `entries` ne sont pas converties. Les journées utilisent des dates civiles locales explicites, distinctes des horodatages UTC.
+- `events[].kind` distingue passage et accident. Bristol conserve `types` et `mode` (`simple`, `intermediate`, `distinct`). Douleur ponctuelle entière de 0 à 10 pour un passage, `null` pour un accident. Aucun épisode douloureux n'est créé.
+- Les conditions sont référencées par ID avec copie du libellé à la saisie. Renommer/désactiver ne réécrit pas l'historique ; modifier une observation conserve le libellé de ses conditions inchangées.
+- La confirmation quotidienne signifie aucun passage aux toilettes. Un accident peut coexister et interdit de compter ce jour comme sans émission de selles. Un passage ajouté corrige la confirmation contradictoire ; sa suppression ne recrée pas cette confirmation.
+- Les sauvegardes exportent le format 2 et lisent les formats 1 et 2, ainsi que la V3. Ce numéro protège contre une restauration silencieusement incomplète dans une ancienne application. La fusion remappe les collisions digestives et ne remplace aucune observation.
+- Une lecture du stockage invalide/inconnue bloque toute écriture jusqu'à un chargement réussi et affiche un avertissement. Les propriétés racine inconnues sont conservées à la sauvegarde.
+- Sept visuels originaux générés par imagegen sont dans `images/bristol-1.webp` à `bristol-7.webp`, chargés localement et inclus dans le cache. Les formes ont été contrôlées avec les descriptions du NHS : https://www.england.nhs.uk/wp-content/uploads/2023/07/Bristol-stool-chart-for-carer-web-version.pdf. Illustrations validées par Laurie le 26 octobre 2026.
+- Les règles de suivi des anciennes observations restent inchangées dans ce lot. Le fractionnement des saisies simultanées, les constats enrichis et la clôture ciblée sont réservés au lot 2.
+- Rapports médicaux, statistiques spécialisées, historique entrelacé et notifications restent à réaliser dans leurs lots.
+- Tests : `npm test`. Vérification du navigateur indisponible : installation Chromium échouée (archive téléchargée invalide). Ne pas annoncer de test mobile réel.

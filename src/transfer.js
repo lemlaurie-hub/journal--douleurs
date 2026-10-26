@@ -1,11 +1,13 @@
 import { normalizeBodyMap, normalizeItemLocations } from "./body-map.js";
+import { validateDigestive, mergeDigestive } from "./digestive.js";
 
 // Formats d'export et fonctions d'import/export de données.
 // Ce module ne lit ni n'écrit le stockage : l'appelant valide l'import puis
 // enregistre le résultat en une seule écriture.
 
 export const BACKUP_FORMAT = "journal-sante";
-export const BACKUP_FORMAT_VERSION = 1;
+// Les anciennes applications refusent le format 2 plutôt que perdre le transit.
+export const BACKUP_FORMAT_VERSION = 2;
 const DATA_SCHEMA_VERSION = 1;
 
 // Les opérations de transfert travaillent sur des copies pour préserver leurs entrées.
@@ -165,6 +167,7 @@ function validateData(data) {
   if (!Array.isArray(data.catalog) || !Array.isArray(data.entries)) {
     throw new Error("Fichier invalide : catalogue ou historique absent.");
   }
+  validateDigestive(data.digestive);
 
   const catalogIds = new Set();
   for (const [index, item] of data.catalog.entries()) {
@@ -276,7 +279,7 @@ export function parseBackup(input) {
   }
 
   if (backup.format === BACKUP_FORMAT) {
-    if (backup.formatVersion !== BACKUP_FORMAT_VERSION) {
+    if (![1, BACKUP_FORMAT_VERSION].includes(backup.formatVersion)) {
       throw new Error(
         `Version de sauvegarde non prise en charge : ${backup.formatVersion ?? "inconnue"}.`,
       );
@@ -417,5 +420,11 @@ export function mergeBackup(currentData, backupInput) {
     ...(incoming.settings || {}),
     ...(currentData.settings || {}),
   };
-  return { data: next, catalogAdded, entriesAdded };
+  if (currentData.digestive || incoming.digestive) {
+    next.digestive = mergeDigestive(currentData.digestive, incoming.digestive);
+  }
+  const digestiveAdded = (next.digestive?.events.length || 0) - (currentData.digestive?.events.length || 0);
+  const daysAdded = (next.digestive?.days.length || 0) - (currentData.digestive?.days.length || 0);
+  return { data: next, catalogAdded, entriesAdded, digestiveAdded, daysAdded };
 }
+
