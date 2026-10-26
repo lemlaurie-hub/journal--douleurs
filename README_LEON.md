@@ -156,7 +156,7 @@ Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il 
 
 Les tests couvrent également la modification d'une observation sans recréer son identifiant ni changer sa date précise, sa note ou ses métadonnées intactes. Ils vérifient le reclassement ciblé et idempotent des éléments V3 nommés exactement « Migraine » et « Migraine ophtalmique ».
 
-Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant » enregistre son horodatage dans le même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Pour un événement déjà terminé, un constat passé peut être ajouté après coup, uniquement entre le début et la fin; les constats sont ordonnés et un horaire identique ne crée pas de doublon. La fin peut être antidatée et corrigée ensuite, mais pas avant le dernier constat de présence. La fin est facultative et explicite, les anciennes observations restent valides sans durée inventée. L'interface ne clôt jamais automatiquement un événement.
+Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant » enregistre son horodatage dans le même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Toute observation, y compris une ancienne entrée V3, peut recevoir un constat passé après son premier repère et avant sa fin si elle est connue. Les constats sont ordonnés et un horaire identique ne crée pas de doublon. Si le premier repère est antidaté, l'ancien repère est conservé comme constat par défaut; l'éditeur permet de l'écarter si l'heure d'origine était erronée. La fin reste facultative et explicite, et les anciennes observations ne reçoivent aucune durée inventée. L'interface ne clôt jamais automatiquement un événement.
 
 ## 10. Publication GitHub
 
@@ -211,7 +211,7 @@ La V4 est une PWA mobile-first avec données locales. Elle démarre volontaireme
 - `styles.css` : présentation mobile-first.
 - `src/storage.js` : lecture/écriture du stockage local et format de données.
 - `src/catalog.js` : création et gestion des éléments de suivi.
-- `src/entries.js` : création/suppression des observations.
+- `src/entries.js` : création, correction, suppression et chronologie des observations/épisodes.
 - `src/stats.js` : calculs statistiques communs.
 - `src/transfer.js` : validation, export JSON V4, import JSON V4/V3 et fusion non destructive.
 - `src/ui.js` : rendu de l'interface et orchestration des interactions.
