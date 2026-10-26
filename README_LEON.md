@@ -156,7 +156,7 @@ Le dépôt inclut un test automatisé sans dépendance externe : `npm test`. Il 
 
 Les tests couvrent également la modification d'une observation sans recréer son identifiant ni changer sa date précise, sa note ou ses métadonnées intactes. Ils vérifient le reclassement ciblé et idempotent des éléments V3 nommés exactement « Migraine » et « Migraine ophtalmique ».
 
-Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant » enregistre son horodatage dans le même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Toute observation, y compris une ancienne entrée V3, peut recevoir un constat passé après son premier repère et avant sa fin si elle est connue. Les constats sont ordonnés et un horaire identique ne crée pas de doublon. Si le premier repère est antidaté, l'ancien repère est conservé comme constat par défaut; l'éditeur permet de l'écarter si l'heure d'origine était erronée. La fin reste facultative et explicite, et les anciennes observations ne reçoivent aucune durée inventée. L'interface ne clôt jamais automatiquement un événement.
+Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant » enregistre son horodatage dans le même événement, que la durée minimale va de la première observation au dernier constat où l'événement était encore présent, et que l'heure à laquelle l'absence est constatée est distincte de cette durée. Toute observation, y compris une ancienne entrée V3, peut recevoir un constat passé après son premier repère et avant sa fin si elle est connue. Les constats sont ordonnés et un horaire identique ne crée pas de doublon. Si le premier repère est antidaté, l'ancien repère est conservé comme constat par défaut; l'éditeur permet de l'écarter si l'heure d'origine était erronée. La fin reste facultative et explicite, et les anciennes observations ne reçoivent aucune durée inventée. Depuis le lot 2, une nouvelle saisie clôture uniquement l’ancien épisode de la même douleur à la même localisation, avec fin inconnue ; cette règle remplace l’absence de clôture automatique du socle initial.
 
 ## 10. Publication GitHub
 
@@ -241,7 +241,7 @@ L'import V3 sera conçu séparément et ne devra jamais effacer la source V3.
 - Les éléments V3 d'identifiants `item-v3-*` et de libellés exacts « Migraine » ou « Migraine ophtalmique » sont classés comme symptômes/événements. Cette migration idempotente ne change pas les observations. Les autres anciennes zones restent à corriger au cas par cas.
 - Le modèle de stockage existant est conservé ; ajouter un module ne nécessite pas de convertir l'historique.
 - La carte Rhumato recto-verso crée au besoin des zones précises dans le catalogue, puis les coche dans le formulaire courant. Les coches peuvent être retirées depuis le résumé de sélection ; les anciennes entrées ne sont pas modifiées.
-- `occurredAt` est le premier repère de l'observation. Toute observation, y compris une ancienne entrée V3 qui n'a pas encore de données de suivi, peut recevoir des constats « Encore maintenant » ou antidatés depuis l'historique. Chaque constat est une heure de présence, pas une nouvelle observation. Les constats antidatés doivent se situer après le premier repère et, si une fin est connue, avant celle-ci. Ils sont triés et une même heure n'est stockée qu'une fois. Sans `endedAt`, la fin reste inconnue ; aucune fermeture automatique n'est appliquée.
+- `occurredAt` est le premier repère de l'observation. Toute observation, y compris une ancienne entrée V3 qui n'a pas encore de données de suivi, peut recevoir des constats « Encore maintenant » ou antidatés depuis l'historique. Chaque constat est une heure de présence, pas une nouvelle observation. Les constats antidatés doivent se situer après le premier repère et, si une fin est connue, avant celle-ci. Ils sont triés et une même heure n'est stockée qu'une fois. Une fin explicite est portée par `endedAt`. Depuis le lot 2, `closedUnknown` distingue un épisode clôturé sans heure de fin. Les observations anciennes sans ces champs ne reçoivent aucune fin inventée.
 - La durée minimale constatée se calcule entre `occurredAt` et le dernier constat où l'événement était encore présent. La fin constatée (`endedAt`) est séparée et ne prolonge pas cette durée. Quand l'heure de début est corrigée vers une heure antérieure, l'ancien premier repère est conservé comme constat de présence par défaut ; la case de l'éditeur permet de ne pas le conserver si cet ancien horaire était erroné. Les anciennes données ne reçoivent ni fin ni durée ultérieure inventée.
 
 ### Rubriques repliables
@@ -263,8 +263,6 @@ Un seul élément de catalogue (ex. « Ongles ») peut être rattaché aux deux 
 
 Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un navigateur local n'a pas pu être exécuté : aucun exécutable Chromium n'est installé et son téléchargement a échoué (archive invalide). Ne pas présenter l'interface mobile comme testée. Vérifier : créer « Ongles » une fois pour les deux mains, choisir face/dos, sélectionner les deux côtés, retirer un seul côté depuis les sélections, sauvegarder/recharger, modifier l'observation, modifier le rattachement et vérifier que l'ancien côté reste intact. Vérifier aussi l'ouverture/fermeture des rubriques Historique et Zones enregistrées. Laurie a autorisé la publication le 18 octobre 2026 après avoir été informée de cette limite ; le contrôle visuel reste à effectuer.
 
-
-
 ## Lot 1 Digestif — développement local du 26 octobre 2026
 
 État : publication autorisée le 26 octobre 2026 pour tests par Laurie ; moteur testé, contrôle Android restant à faire. Le cahier des charges et les arbitrages sont dans `docs/CAHIER_DES_CHARGES_DIGESTIF.md`.
@@ -281,3 +279,37 @@ Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un na
 - Les règles de suivi des anciennes observations restent inchangées dans ce lot. Le fractionnement des saisies simultanées, les constats enrichis et la clôture ciblée sont réservés au lot 2.
 - Rapports médicaux, statistiques spécialisées, historique entrelacé et notifications restent à réaliser dans leurs lots.
 - Tests : `npm test`. Vérification du navigateur indisponible : installation Chromium échouée (archive téléchargée invalide). Ne pas annoncer de test mobile réel.
+
+## Lot 2 — symptômes configurables et corrections d’ergonomie
+
+État : **publication de la version 4.8.0 autorisée par Laurie le 26 octobre 2026 pour tests sur son téléphone**. Accord de développement explicite de Laurie après les retours du lot 1. Les décisions détaillées sont dans `docs/LOT_2_DECISIONS.md` et le bilan dans `docs/BILAN_LOT_2.md`.
+
+### Moteurs communs
+
+- `src/criteria.js` définit les champs/actions, configurations, valeurs initiales et validations. La douleur commence à 0 uniquement pour une nouvelle observation dont le formulaire contient ce critère. Absence de critère, gêne vide et anciennes valeurs absentes restent distinctes de zéro.
+- `src/criteria-ui.js` construit les champs des aperçus, des saisies et des corrections. Les champs historiques retirés d’une configuration restent consultables et modifiables ; les nouveaux champs ajoutés ne sont pas remplis rétroactivement.
+- `src/episodes.js` est le moteur temporel commun aux nouvelles observations et au suivi par cible des anciennes saisies. `src/entries.js` conserve les fonctions du socle nécessaires aux anciennes données et à la correction des associations ; l’interface utilise le moteur commun pour les nouveaux épisodes et les constats.
+- `src/episode-ui.js` emploie une même fenêtre pour les symptômes, l’édition d’une cible, les constats et la fin. Les symptômes prédéfinis et personnalisés utilisent la même bibliothèque et les mêmes commandes.
+- `src/history.js` produit les vues ordonnées communes à l’accueil et aux modules ; `src/history-ui.js` les rend. Transit, accidents, journées sans passage et symptômes sont tous visibles, sans doublon d’historique Digestif. L’intercalage exhaustif des constats dans une chronologie médicale reste au lot 3.
+- `src/dialogs.js` assure la barre unique Annuler/Enregistrer, sa position persistante, l’abandon protégé et la fermeture par Échap. Aucun double moteur de sauvegarde n’est ajouté pour les boutons.
+
+### Données additives
+
+Le schéma racine reste 1 ; le format de sauvegarde passe à **3**, avec lecture des formats 1, 2 et V3. Les anciennes applications refuseront le format de sauvegarde récent au lieu de restaurer silencieusement des données incomplètes.
+
+- Le catalogue porte une configuration optionnelle `config: {version:1, criteria:[...]}`.
+- Une nouvelle observation peut porter `episodeVersion:2`, `values`, `configSnapshot`, `itemSnapshot`, `sourceGroupId`, `checks` et `occurrenceGroupId`.
+- Une saisie commune crée un épisode par élément ET côté. Chaque épisode reçoit un identifiant propre, le même horaire/niveau/commentaire initial, et un `sourceGroupId` commun qui n’exprime pas de lien médical.
+- Les anciens enregistrements groupés gardent leur identifiant, leurs données brutes et leurs constats. Les évolutions ciblées sont ajoutées dans `targetStates`, indexé par `JSON.stringify([itemId,regionId])`. Le transfert remappe ces clés lors d’une collision de catalogue.
+- `checks` conserve l’identité, l’heure, les niveaux/valeurs et la note de chaque constat. `stillAt` reste le miroir temporel compatible. Les anciens horaires sont projetés sans intensité inventée ; éditer/supprimer un constat ne détruit pas l’épisode.
+- `closedUnknown` et `closure` portent la clôture automatique définitive. `closure.nextEpisodeAt` est le repère du nouvel épisode, **pas une heure de fin estimée**. Il interdit d’ajouter un constat contradictoire après ce nouveau début. Supprimer/modifier la nouvelle entrée ne rouvre jamais l’ancienne. Une fin explicite peut être précisée après coup, dans les bornes compatibles.
+- Les actions enregistrent une heure capturée au clic. La préparation du formulaire et le temps pris pour le remplir ne décalent pas cette heure si elle n’est pas modifiée.
+- Une nouvelle occurrence de remontée crée sa propre observation dans le même groupe ; hauteur et gêne restent non renseignées. Un éventuel critère douleur personnalisé conserve sa convention de zéro initial.
+
+### Vérification et publication
+
+- `npm test` : 83 tests réussis pour le moteur et le précache. Les 58 tests antérieurs sont conservés.
+- `tests/browser-lot2.mjs` exécute une série de scénarios réels avec Playwright, serveur local intégré et données synthétiques : création/édition, modalités, abandon, historique, anciennes données, réimportation, petits écrans et hors ligne. Les outils du navigateur ne font pas partie de l’application.
+- Chromium a pu être installé pour ce lot via un paquet de distribution, contrairement au téléchargement standard qui avait échoué auparavant. Les essais ont réellement été exécutés. Cela ne remplace pas une validation sur le téléphone Android de Laurie.
+- Les ressources et le cache sont préparés pour la version 4.8.0. Accord distinct de publication donné par Laurie le 26 octobre 2026 pour tests. Vérifier `main`, les ressources distantes et GitHub Pages avant d’annoncer la mise en ligne.
+- Pour une publication atomique incluant plusieurs nouveaux modules/illustrations, l’interface GitHub peut créer les blobs, un arbre basé sur la tête vérifiée, puis un seul commit et un déplacement non forcé de `main`. Cela évite un déploiement intermédiaire incomplet. Ne jamais utiliser `git push` sans identifiants ni écraser une tête distante qui a changé.

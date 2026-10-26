@@ -13,7 +13,7 @@ function createId(prefix) {
 }
 
 /** Accepte un niveau ou deux niveaux voisins, sans doublons. */
-function normalizeLevels(levels) {
+export function normalizeLevels(levels) {
   const unique = [...new Set((levels || []).map(Number))]
     .filter((level) => Number.isInteger(level) && level >= 1 && level <= 4)
     .sort((a, b) => a - b);

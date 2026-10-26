@@ -14,7 +14,7 @@
     <title>Journal de suivi santé</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=4.7.0" />
+    <link rel="stylesheet" href="./styles.css?v=4.8.0" />
   </head>
   <body>
     <!-- En-tête commun aux pages d'accueil et aux modules. -->
@@ -82,7 +82,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Vue d'ensemble</p>
-              <h2 id="home-stats-title">Douleurs et symptômes</h2>
+              <h2 id="home-stats-title">Suivi global</h2>
             </div>
           </div>
           <div id="home-stats" class="stats-grid"></div>
@@ -92,7 +92,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Toutes catégories</p>
-              <h2 id="recent-title">Dernières douleurs et symptômes</h2>
+              <h2 id="recent-title">Derniers événements — toutes catégories</h2>
             </div>
           </div>
           <div id="home-history" class="history-list"></div>
@@ -145,379 +145,85 @@
         </section>
 
         <!-- Transit : les formulaires partagent le moteur et les sauvegardes V4. -->
-        <section id="digestive-panel" class="panel" hidden aria-labelledby="transit-heading">
+        <section
+          id="digestive-panel"
+          class="panel"
+          hidden
+          aria-labelledby="transit-heading"
+        >
           <h2 id="transit-heading">Suivi digestif</h2>
           <div class="digestive-actions">
-            <button id="transit-open-passage" class="button button-primary" type="button">Passage aux toilettes</button>
-            <button id="transit-open-accident" class="button button-secondary" type="button">Ça s’est échappé</button>
-            <button id="transit-open-symptom" class="button button-secondary" type="button">Symptôme digestif</button>
-            <button id="transit-open-history" class="button button-secondary" type="button">Historique et rapports</button>
-          </div>
-          <p class="field-help">Les symptômes utilisent encore la saisie générale ci-dessous. Les rapports médicaux arriveront dans un prochain lot.</p>
-          <fieldset>
-            <legend>Journée sans passage aux toilettes</legend>
-            <label class="field"><span>Journée à renseigner</span><input id="transit-day" type="date" required></label>
-            <p id="transit-day-status" role="status"></p>
-            <div class="form-actions">
-              <button id="transit-confirm-none" type="button" class="button button-secondary">Aucun passage ce jour</button>
-              <button id="transit-clear-none" type="button" class="button button-secondary" hidden>Annuler cette confirmation</button>
-            </div>
-            <p class="field-help">Un accident reste à enregistrer séparément. Une journée sans réponse reste inconnue.</p>
-          </fieldset>
-          <details id="transit-history-details" class="collapsible-panel">
-            <summary><h3>Historique du transit</h3></summary>
-            <div id="transit-history" class="history-list"></div>
-          </details>
-          <details class="collapsible-panel">
-            <summary><h3>Personnaliser les conditions</h3></summary>
-            <p class="field-help">Renommer ou désactiver une condition conserve son ancien nom dans les passages déjà enregistrés.</p>
-            <div id="transit-condition-list" class="catalog-list"></div>
-            <form id="transit-condition-form">
-              <label class="field"><span>Nom de la condition</span><input id="transit-condition-label" required maxlength="160"></label>
-              <button id="transit-condition-save" type="submit" class="button button-secondary">Ajouter</button>
-              <button id="transit-condition-cancel" type="button" class="button button-secondary" hidden>Annuler</button>
-            </form>
-          </details>
-        </section>
-
-        <section class="panel" aria-labelledby="entry-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Saisie et correction</p>
-              <h2 id="entry-title">Nouvelle observation</h2>
-            </div>
-            <button
-              type="button"
-              class="button button-secondary"
-              data-open-catalog
+            <section
+              class="transit-passage-group"
+              aria-labelledby="transit-passage-title"
             >
-              + Créer un élément
+              <h3 id="transit-passage-title">Passage aux toilettes</h3>
+              <button
+                id="transit-open-passage"
+                class="button button-primary"
+                type="button"
+              >
+                + Ajouter un passage
+              </button>
+              <button
+                id="transit-open-none"
+                class="button button-secondary"
+                type="button"
+              >
+                Aucun passage ce jour
+              </button>
+            </section>
+            <button
+              id="transit-open-accident"
+              class="button button-secondary"
+              type="button"
+            >
+              Ça s’est échappé
+            </button>
+            <button
+              id="transit-open-symptom"
+              class="button button-secondary"
+              type="button"
+            >
+              Symptôme digestif
+            </button>
+            <button
+              id="transit-open-history"
+              class="button button-secondary consultation-button"
+              type="button"
+            >
+              Consulter l’historique et les rapports →
             </button>
           </div>
-          <form id="entry-form" novalidate>
-            <fieldset>
-              <legend>Élément(s) concerné(s)</legend>
-              <p class="field-help">
-                Tu peux choisir plusieurs zones. Pour corriger une ancienne
-                saisie, décoche ou ajoute les bons éléments.
-              </p>
-              <section
-                id="body-map"
-                class="body-map"
-                hidden
-                aria-label="Carte corporelle Rhumato"
-              >
-                <div
-                  class="body-map-tabs"
-                  role="group"
-                  aria-label="Face du corps"
-                >
-                  <button
-                    id="body-map-front"
-                    class="button button-secondary is-active"
-                    type="button"
-                    aria-pressed="true"
-                  >
-                    De face
-                  </button>
-                  <button
-                    id="body-map-back"
-                    class="button button-secondary"
-                    type="button"
-                    aria-pressed="false"
-                  >
-                    De dos
-                  </button>
-                </div>
-                <div class="body-figure" aria-label="Choisir une zone du corps">
-                  <span class="body-side body-side-left">droite</span
-                  ><span class="body-side body-side-right">gauche</span>
-                  <svg
-                    class="body-figure-svg"
-                    viewBox="0 0 300 340"
-                    role="img"
-                    aria-label="Silhouette humaine"
-                  >
-                    <circle class="body-shape" cx="150" cy="34" r="22" />
-                    <rect
-                      class="body-shape"
-                      x="137"
-                      y="52"
-                      width="26"
-                      height="22"
-                      rx="10"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M112 72 Q150 61 188 72 L177 101 Q172 111 173 126 L174 189 L126 189 L127 126 Q128 111 123 101 Z"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M113 75 Q101 77 96 91 L78 151 Q74 163 81 168 Q88 172 93 160 L111 116 L127 99 Z"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M187 75 Q199 77 204 91 L222 151 Q226 163 219 168 Q212 172 207 160 L189 116 L173 99 Z"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M128 181 L172 181 L169 235 L163 294 Q161 306 151 306 Q142 306 142 294 L143 238 L138 294 Q137 306 127 306 Q117 306 120 294 L127 235 Z"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M120 294 Q131 290 141 298 L134 319 Q129 326 112 325 L99 321 Q96 316 103 313 Z"
-                    />
-                    <path
-                      class="body-shape"
-                      d="M159 298 Q170 290 180 294 L197 313 Q204 316 201 321 L188 325 Q171 326 166 319 Z"
-                    />
-                    <circle class="body-joint" cx="111" cy="154" r="7" />
-                    <circle class="body-joint" cx="189" cy="154" r="7" />
-                    <circle class="body-joint" cx="130" cy="235" r="7" />
-                    <circle class="body-joint" cx="170" cy="235" r="7" />
-                  </svg>
-                  <div id="body-map-hotspots" class="body-map-hotspots">
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="neck"
-                      data-front-left="50"
-                      style="left: 50%; top: 21%"
-                      aria-label="Cou"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="shoulder-right"
-                      data-front-left="38"
-                      style="left: 38%; top: 31%"
-                      aria-label="Épaule droite"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="shoulder-left"
-                      data-front-left="62"
-                      style="left: 62%; top: 31%"
-                      aria-label="Épaule gauche"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="trunk"
-                      data-front-left="50"
-                      style="left: 50%; top: 43%"
-                      aria-label="Torse"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="arm-right"
-                      data-front-left="26"
-                      style="left: 26%; top: 47%"
-                      aria-label="Bras droit"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="arm-left"
-                      data-front-left="74"
-                      style="left: 74%; top: 47%"
-                      aria-label="Bras gauche"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="hand-right"
-                      data-front-left="20"
-                      style="left: 20%; top: 55%"
-                      aria-label="Main droite"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="hand-left"
-                      data-front-left="80"
-                      style="left: 80%; top: 55%"
-                      aria-label="Main gauche"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="hip-right"
-                      data-front-left="42"
-                      style="left: 42%; top: 59%"
-                      aria-label="Hanche droite"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="hip-left"
-                      data-front-left="58"
-                      style="left: 58%; top: 59%"
-                      aria-label="Hanche gauche"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="leg-right"
-                      data-front-left="43"
-                      style="left: 43%; top: 72%"
-                      aria-label="Jambe droite"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="leg-left"
-                      data-front-left="57"
-                      style="left: 57%; top: 72%"
-                      aria-label="Jambe gauche"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="foot-right"
-                      data-front-left="43"
-                      style="left: 43%; top: 89%"
-                      aria-label="Pied droit"
-                    ></button>
-                    <button
-                      class="body-hotspot"
-                      type="button"
-                      data-body-region="foot-left"
-                      data-front-left="57"
-                      style="left: 57%; top: 89%"
-                      aria-label="Pied gauche"
-                    ></button>
-                  </div>
-                </div>
-                <div class="body-map-detail" aria-live="polite">
-                  <h3 id="body-map-title">Choisis une zone sur le bonhomme</h3>
-                  <p id="body-map-help" class="field-help">
-                    Les précisions proposées changent entre la vue de face et la
-                    vue de dos.
-                  </p>
-                  <div id="body-map-options" class="body-map-options"></div>
-                </div>
-                <div class="body-map-selected">
-                  <strong>Sélection en cours</strong>
-                  <div
-                    id="body-map-selected-list"
-                    class="body-map-selected-list"
-                  ></div>
-                </div>
-              </section>
-              <button
-                id="manual-choices-toggle"
-                class="button button-secondary manual-choices-toggle"
-                type="button"
-                hidden
-              >
-                Voir toutes les zones du catalogue
-              </button>
-              <div id="item-choices" class="choice-list"></div>
-            </fieldset>
-            <fieldset>
-              <legend>Niveau de gêne</legend>
-              <p class="field-help">
-                Tu peux choisir un niveau, ou deux niveaux voisins si c'est
-                entre les deux.
-              </p>
-              <div id="levels" class="level-grid">
-                <button
-                  type="button"
-                  class="level-button"
-                  data-level="1"
-                  aria-pressed="false"
-                >
-                  🙂 Supportable
-                </button>
-                <button
-                  type="button"
-                  class="level-button"
-                  data-level="2"
-                  aria-pressed="false"
-                >
-                  😕 Gênante
-                </button>
-                <button
-                  type="button"
-                  class="level-button"
-                  data-level="3"
-                  aria-pressed="false"
-                >
-                  😣 Limitante
-                </button>
-                <button
-                  type="button"
-                  class="level-button"
-                  data-level="4"
-                  aria-pressed="false"
-                >
-                  😭 Invalidante
-                </button>
-              </div>
-            </fieldset>
-            <div class="form-grid">
-              <label class="field"
-                ><span>Date et heure</span
-                ><input
-                  id="occurred-at"
-                  name="occurred-at"
-                  type="datetime-local"
-                  required
-              /></label>
-              <div>
-                <p class="field-help">
-                  Cette heure sert de premier repère. Tu peux compléter toute
-                  observation avec des constats passés ou une fin, depuis
-                  l’historique.
-                </p>
-                <div id="preserve-previous-group" hidden>
-                  <label class="checkbox-field"
-                    ><input
-                      id="preserve-previous"
-                      type="checkbox"
-                      checked
-                    /><span id="preserve-previous-label"
-                      >Conserver l’ancien horaire comme constat de
-                      présence</span
-                    ></label
-                  >
-                  <p class="field-help">
-                    Décoche uniquement si l’ancien horaire était une erreur de
-                    saisie.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <label class="field"
-              ><span>Note <small>(facultative)</small></span
-              ><textarea
-                id="note"
-                name="note"
-                rows="4"
-                placeholder="Contexte, sensation, déclencheur éventuel…"
-              ></textarea>
-            </label>
-            <div class="form-actions">
-              <button
-                type="submit"
-                id="save-entry"
-                class="button button-primary"
-              >
-                Enregistrer</button
-              ><button
-                type="button"
-                id="cancel-edit"
-                class="button button-secondary"
-                hidden
-              >
-                Annuler la modification
-              </button>
-            </div>
-          </form>
+          <p class="field-help">
+            Les rapports médicaux arriveront dans un prochain lot.
+          </p>
+
+          <button
+            id="transit-open-conditions"
+            type="button"
+            class="button button-secondary"
+          >
+            Personnaliser les conditions
+          </button>
         </section>
+
+        <div id="module-entry-actions" class="form-actions">
+          <button
+            id="open-entry-dialog"
+            type="button"
+            class="button button-primary"
+          >
+            Ajouter une observation
+          </button>
+          <button
+            type="button"
+            class="button button-secondary"
+            data-open-catalog
+          >
+            Créer une zone ou un symptôme
+          </button>
+        </div>
 
         <section class="panel" aria-labelledby="module-stats-title">
           <div class="section-heading">
@@ -552,37 +258,546 @@
       </section>
     </main>
 
+    <dialog id="transit-day-dialog" class="dialog">
+      <form id="transit-day-form" class="dialog-card">
+        <fieldset>
+          <legend>Journée sans passage aux toilettes</legend>
+          <label class="field"
+            ><span>Journée à renseigner</span
+            ><input id="transit-day" type="date" required
+          /></label>
+          <p id="transit-day-status" role="status"></p>
+          <div class="form-actions">
+            <button
+              id="transit-confirm-none"
+              type="submit"
+              class="button button-secondary"
+            >
+              Aucun passage ce jour
+            </button>
+            <button
+              id="transit-day-cancel"
+              type="button"
+              class="button button-secondary"
+              data-dialog-cancel
+            >
+              Annuler
+            </button>
+          </div>
+          <p class="field-help">
+            Un accident reste à enregistrer séparément. Une journée sans réponse
+            reste inconnue.
+          </p>
+        </fieldset>
+      </form>
+    </dialog>
+    <dialog id="transit-condition-dialog" class="dialog">
+      <form id="transit-condition-form" class="dialog-card">
+        <button
+          id="transit-conditions-close"
+          data-dialog-cancel
+          type="button"
+          class="button button-secondary"
+        >
+          Fermer
+        </button>
+        <h2>Personnaliser les conditions</h2>
+        <p class="field-help">
+          Renommer ou désactiver une condition conserve son ancien nom dans les
+          passages déjà enregistrés.
+        </p>
+        <div id="transit-condition-list" class="catalog-list"></div>
+
+        <label class="field"
+          ><span>Nom de la condition</span
+          ><input id="transit-condition-label" required maxlength="160"
+        /></label>
+        <button
+          id="transit-condition-save"
+          type="submit"
+          class="button button-secondary"
+        >
+          Ajouter
+        </button>
+        <button
+          id="transit-condition-cancel"
+          type="button"
+          class="button button-secondary"
+          hidden
+        >
+          Annuler
+        </button>
+      </form>
+    </dialog>
+    <dialog id="episode-dialog" class="dialog">
+      <form id="episode-form" class="dialog-card">
+        <h2 id="episode-title">Symptôme digestif</h2>
+        <div id="episode-symptom-group">
+          <label class="field"
+            ><span>Symptôme ou événement</span
+            ><select id="episode-symptom" required></select
+          ></label>
+          <button
+            id="episode-new-symptom"
+            type="button"
+            class="button button-secondary"
+          >
+            Créer un symptôme ou événement
+          </button>
+        </div>
+        <label class="field"
+          ><span>Date et heure</span
+          ><input id="episode-at" type="datetime-local" required
+        /></label>
+        <fieldset id="episode-levels-group" hidden>
+          <legend>Intensité actuelle (facultative)</legend>
+          <div id="episode-levels"></div>
+        </fieldset>
+        <div id="episode-fields"></div>
+        <label id="episode-preserve-group" class="checkbox-field" hidden
+          ><input id="episode-preserve" type="checkbox" checked /><span
+            >Si j’antidate le début, conserver l’ancien horaire comme constat de
+            présence</span
+          ></label
+        >
+        <div class="form-actions">
+          <button
+            id="episode-cancel"
+            type="button"
+            class="button button-secondary"
+            data-dialog-cancel
+          >
+            Annuler
+          </button>
+          <button type="submit" class="button button-primary">
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="entry-dialog" class="dialog">
+      <section class="panel" aria-labelledby="entry-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Saisie et correction</p>
+            <h2 id="entry-title">Nouvelle observation</h2>
+          </div>
+          <button
+            type="button"
+            class="button button-secondary"
+            data-open-catalog
+          >
+            + Créer une zone ou un symptôme
+          </button>
+        </div>
+        <form id="entry-form" novalidate>
+          <fieldset>
+            <legend>Élément(s) concerné(s)</legend>
+            <p class="field-help">
+              Tu peux choisir plusieurs zones. Pour corriger une ancienne
+              saisie, décoche ou ajoute les bons éléments.
+            </p>
+            <section
+              id="body-map"
+              class="body-map"
+              hidden
+              aria-label="Carte corporelle Rhumato"
+            >
+              <div
+                class="body-map-tabs"
+                role="group"
+                aria-label="Face du corps"
+              >
+                <button
+                  id="body-map-front"
+                  class="button button-secondary is-active"
+                  type="button"
+                  aria-pressed="true"
+                >
+                  De face
+                </button>
+                <button
+                  id="body-map-back"
+                  class="button button-secondary"
+                  type="button"
+                  aria-pressed="false"
+                >
+                  De dos
+                </button>
+              </div>
+              <div class="body-figure" aria-label="Choisir une zone du corps">
+                <span class="body-side body-side-left">droite</span
+                ><span class="body-side body-side-right">gauche</span>
+                <svg
+                  class="body-figure-svg"
+                  viewBox="0 0 300 340"
+                  role="img"
+                  aria-label="Silhouette humaine"
+                >
+                  <circle class="body-shape" cx="150" cy="34" r="22" />
+                  <rect
+                    class="body-shape"
+                    x="137"
+                    y="52"
+                    width="26"
+                    height="22"
+                    rx="10"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M112 72 Q150 61 188 72 L177 101 Q172 111 173 126 L174 189 L126 189 L127 126 Q128 111 123 101 Z"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M113 75 Q101 77 96 91 L78 151 Q74 163 81 168 Q88 172 93 160 L111 116 L127 99 Z"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M187 75 Q199 77 204 91 L222 151 Q226 163 219 168 Q212 172 207 160 L189 116 L173 99 Z"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M128 181 L172 181 L169 235 L163 294 Q161 306 151 306 Q142 306 142 294 L143 238 L138 294 Q137 306 127 306 Q117 306 120 294 L127 235 Z"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M120 294 Q131 290 141 298 L134 319 Q129 326 112 325 L99 321 Q96 316 103 313 Z"
+                  />
+                  <path
+                    class="body-shape"
+                    d="M159 298 Q170 290 180 294 L197 313 Q204 316 201 321 L188 325 Q171 326 166 319 Z"
+                  />
+                  <circle class="body-joint" cx="111" cy="154" r="7" />
+                  <circle class="body-joint" cx="189" cy="154" r="7" />
+                  <circle class="body-joint" cx="130" cy="235" r="7" />
+                  <circle class="body-joint" cx="170" cy="235" r="7" />
+                </svg>
+                <div id="body-map-hotspots" class="body-map-hotspots">
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="neck"
+                    data-front-left="50"
+                    style="left: 50%; top: 21%"
+                    aria-label="Cou"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="shoulder-right"
+                    data-front-left="38"
+                    style="left: 38%; top: 31%"
+                    aria-label="Épaule droite"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="shoulder-left"
+                    data-front-left="62"
+                    style="left: 62%; top: 31%"
+                    aria-label="Épaule gauche"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="trunk"
+                    data-front-left="50"
+                    style="left: 50%; top: 43%"
+                    aria-label="Torse"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="arm-right"
+                    data-front-left="26"
+                    style="left: 26%; top: 47%"
+                    aria-label="Bras droit"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="arm-left"
+                    data-front-left="74"
+                    style="left: 74%; top: 47%"
+                    aria-label="Bras gauche"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="hand-right"
+                    data-front-left="20"
+                    style="left: 20%; top: 55%"
+                    aria-label="Main droite"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="hand-left"
+                    data-front-left="80"
+                    style="left: 80%; top: 55%"
+                    aria-label="Main gauche"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="hip-right"
+                    data-front-left="42"
+                    style="left: 42%; top: 59%"
+                    aria-label="Hanche droite"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="hip-left"
+                    data-front-left="58"
+                    style="left: 58%; top: 59%"
+                    aria-label="Hanche gauche"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="leg-right"
+                    data-front-left="43"
+                    style="left: 43%; top: 72%"
+                    aria-label="Jambe droite"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="leg-left"
+                    data-front-left="57"
+                    style="left: 57%; top: 72%"
+                    aria-label="Jambe gauche"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="foot-right"
+                    data-front-left="43"
+                    style="left: 43%; top: 89%"
+                    aria-label="Pied droit"
+                  ></button>
+                  <button
+                    class="body-hotspot"
+                    type="button"
+                    data-body-region="foot-left"
+                    data-front-left="57"
+                    style="left: 57%; top: 89%"
+                    aria-label="Pied gauche"
+                  ></button>
+                </div>
+              </div>
+              <div class="body-map-detail" aria-live="polite">
+                <h3 id="body-map-title">Choisis une zone sur le bonhomme</h3>
+                <p id="body-map-help" class="field-help">
+                  Les précisions proposées changent entre la vue de face et la
+                  vue de dos.
+                </p>
+                <div id="body-map-options" class="body-map-options"></div>
+              </div>
+              <div class="body-map-selected">
+                <strong>Sélection en cours</strong>
+                <div
+                  id="body-map-selected-list"
+                  class="body-map-selected-list"
+                ></div>
+              </div>
+            </section>
+            <button
+              id="manual-choices-toggle"
+              class="button button-secondary manual-choices-toggle"
+              type="button"
+              hidden
+            >
+              Voir toutes les zones du catalogue
+            </button>
+            <div id="item-choices" class="choice-list"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Niveau de gêne</legend>
+            <p class="field-help">
+              Tu peux choisir un niveau, ou deux niveaux voisins si c'est entre
+              les deux.
+            </p>
+            <div id="levels" class="level-grid">
+              <button
+                type="button"
+                class="level-button"
+                data-level="1"
+                aria-pressed="false"
+              >
+                🙂 Supportable
+              </button>
+              <button
+                type="button"
+                class="level-button"
+                data-level="2"
+                aria-pressed="false"
+              >
+                😕 Gênante
+              </button>
+              <button
+                type="button"
+                class="level-button"
+                data-level="3"
+                aria-pressed="false"
+              >
+                😣 Limitante
+              </button>
+              <button
+                type="button"
+                class="level-button"
+                data-level="4"
+                aria-pressed="false"
+              >
+                😭 Invalidante
+              </button>
+            </div>
+          </fieldset>
+          <div class="form-grid">
+            <label class="field"
+              ><span>Date et heure</span
+              ><input
+                id="occurred-at"
+                name="occurred-at"
+                type="datetime-local"
+                required
+            /></label>
+            <div>
+              <p class="field-help">
+                Cette heure sert de premier repère. Tu peux compléter toute
+                observation avec des constats passés ou une fin, depuis
+                l’historique.
+              </p>
+              <div id="preserve-previous-group" hidden>
+                <label class="checkbox-field"
+                  ><input id="preserve-previous" type="checkbox" checked /><span
+                    id="preserve-previous-label"
+                    >Conserver l’ancien horaire comme constat de présence</span
+                  ></label
+                >
+                <p class="field-help">
+                  Décoche uniquement si l’ancien horaire était une erreur de
+                  saisie.
+                </p>
+              </div>
+            </div>
+          </div>
+          <label class="field"
+            ><span>Note <small>(facultative)</small></span
+            ><textarea
+              id="note"
+              name="note"
+              rows="4"
+              placeholder="Contexte, sensation, déclencheur éventuel…"
+            ></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" id="save-entry" class="button button-primary">
+              Enregistrer</button
+            ><button
+              type="button"
+              id="cancel-edit"
+              class="button button-secondary"
+              hidden
+            >
+              Annuler la modification
+            </button>
+          </div>
+        </form>
+      </section>
+    </dialog>
+
     <dialog id="transit-dialog" class="dialog transit-dialog">
       <form id="transit-form" class="dialog-card">
         <h2 id="transit-title">Passage aux toilettes</h2>
         <p id="transit-error" role="alert" class="transit-error"></p>
-        <label class="field"><span>Date et heure</span><input id="transit-at" type="datetime-local" required></label>
+        <label class="field"
+          ><span>Date et heure</span
+          ><input id="transit-at" type="datetime-local" required
+        /></label>
         <fieldset>
           <legend>Aspect des selles — Bristol (obligatoire)</legend>
-          <p class="field-help">Choisis un type, ou deux si nécessaire. Touche la ligne pour sélectionner ; « Agrandir » ouvre le visuel.</p>
+          <p class="field-help">
+            Choisis un type, ou deux si nécessaire. Touche la ligne pour
+            sélectionner ; « Agrandir » ouvre le visuel.
+          </p>
           <div id="transit-bristol"></div>
           <fieldset id="transit-mode-group" hidden>
             <legend>Que représentent ces deux types ?</legend>
-            <label class="checkbox-field"><input id="transit-mode-intermediate" name="transit-mode" type="radio" value="intermediate"><span>Aspect intermédiaire entre deux types voisins</span></label>
-            <label class="checkbox-field"><input id="transit-mode-distinct" name="transit-mode" type="radio" value="distinct"><span>Deux aspects réellement présents</span></label>
+            <label class="checkbox-field"
+              ><input
+                id="transit-mode-intermediate"
+                name="transit-mode"
+                type="radio"
+                value="intermediate"
+              /><span
+                >Aspect intermédiaire entre deux types voisins</span
+              ></label
+            >
+            <label class="checkbox-field"
+              ><input
+                id="transit-mode-distinct"
+                name="transit-mode"
+                type="radio"
+                value="distinct"
+              /><span>Deux aspects réellement présents</span></label
+            >
           </fieldset>
         </fieldset>
         <div id="transit-passage-fields">
-          <fieldset><legend>Conditions (facultatives)</legend><div id="transit-conditions"></div></fieldset>
-          <label class="field"><span>Douleur pendant l’évacuation : <output id="transit-pain-value" for="transit-pain">0 / 10</output></span><input id="transit-pain" type="range" min="0" max="10" step="1" value="0"></label>
+          <fieldset>
+            <legend>Conditions (facultatives)</legend>
+            <div id="transit-conditions"></div>
+          </fieldset>
+          <label class="field"
+            ><span
+              >Douleur pendant l’évacuation :
+              <output id="transit-pain-value" for="transit-pain"
+                >0 / 10</output
+              ></span
+            ><input
+              id="transit-pain"
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value="0"
+          /></label>
         </div>
-        <label class="field"><span>Commentaire (facultatif)</span><textarea id="transit-note" rows="3" placeholder="Circonstances, aliments, sensations…"></textarea></label>
+        <label class="field"
+          ><span>Commentaire (facultatif)</span
+          ><textarea
+            id="transit-note"
+            rows="3"
+            placeholder="Circonstances, aliments, sensations…"
+          ></textarea>
+        </label>
         <div class="form-actions">
-          <button type="submit" class="button button-primary">Enregistrer</button>
-          <button id="transit-close" type="button" class="button button-secondary">Annuler</button>
+          <button type="submit" class="button button-primary">
+            Enregistrer
+          </button>
+          <button
+            id="transit-close"
+            type="button"
+            class="button button-secondary"
+          >
+            Annuler
+          </button>
         </div>
       </form>
     </dialog>
     <dialog id="bristol-image-dialog" class="dialog">
       <div class="dialog-card">
         <h2 id="bristol-image-description"></h2>
-        <img id="bristol-image" class="bristol-enlarged" alt="">
-        <button id="bristol-image-close" type="button" class="button button-secondary">Fermer l’illustration</button>
+        <img id="bristol-image" class="bristol-enlarged" alt="" />
+        <button
+          id="bristol-image-close"
+          type="button"
+          class="button button-secondary"
+        >
+          Fermer l’illustration
+        </button>
       </div>
     </dialog>
 
@@ -681,6 +896,15 @@
             resteront sans côté.
           </p>
         </div>
+        <fieldset id="catalog-criteria-group" hidden>
+          <legend>Critères et fonctionnalités associés</legend>
+          <div id="catalog-criteria"></div>
+          <details>
+            <summary>Prévisualiser le formulaire</summary>
+            <div id="catalog-preview"></div>
+            <p id="catalog-preview-actions" class="field-help"></p>
+          </details>
+        </fieldset>
         <div class="dialog-actions">
           <button
             type="button"
@@ -739,7 +963,6 @@
     </dialog>
     <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
     <!-- Le point d'entrée relie les interactions à la logique métier. -->
-    <script type="module" src="./src/app.js?v=4.7.0"></script>
+    <script type="module" src="./src/app.js?v=4.8.0"></script>
   </body>
 </html>
-

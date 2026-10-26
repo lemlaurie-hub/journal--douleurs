@@ -1,3 +1,11 @@
+import { renderUnifiedHistory } from "./history-ui.js";
+import { CRITERIA, getItemConfig, initialValues } from "./criteria.js";
+import {
+  renderConfigChoices,
+  readConfigChoices,
+  renderCriteriaFields,
+} from "./criteria-ui.js";
+import { openDialog, closeDialog } from "./dialogs.js";
 import { getFamilyLabel, getKindLabel } from "./catalog.js";
 import {
   BODY_MAP_REGIONS,
@@ -6,7 +14,7 @@ import {
   getEntrySelections,
   formatSelectionLabel,
 } from "./body-map.js";
-import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.6.0";
+import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.0";
 import { calculateStats } from "./stats.js";
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -94,6 +102,7 @@ const MODULES = {
 let editingEntry = null;
 let originalDateTimeFieldValue = null;
 let editingCatalogId = null;
+let catalogFamilyLocked = false;
 let defaultDateTimeFieldValue = null;
 let finishingEntryId = null;
 let correctingEntryEnd = false;
@@ -147,7 +156,12 @@ function filteredData(data, moduleId) {
   const entries = data.entries.filter((entry) =>
     (entry.itemIds || []).some((id) => ids.has(id)),
   );
-  return { ...data, catalog, entries };
+  return {
+    ...data,
+    catalog,
+    entries,
+    ...(moduleId !== "digestif" ? { digestive: undefined } : {}),
+  };
 }
 
 // Navigation PWA : l'URL garde le module ouvert, sans recharger la page.
@@ -178,6 +192,14 @@ export function setActivePage(page, moduleId = null) {
   }
 
   document.querySelector("#digestive-panel").hidden = moduleId !== "digestif";
+  document.querySelector("#module-entry-actions").hidden =
+    moduleId === "digestif";
+  document.querySelectorAll("[data-open-catalog]").forEach((button) => {
+    button.textContent =
+      moduleId === "digestif"
+        ? "Créer un symptôme ou événement"
+        : "Créer une zone ou un symptôme";
+  });
   const module = MODULES[moduleId];
   elements.moduleTitle.textContent = module.title;
   elements.moduleDescription.textContent = module.description;
@@ -338,7 +360,7 @@ export function openFinishDialog(
     elements.finishAt.max = toLocalInputValue(now);
     elements.finishAt.value = toLocalInputValue(edit ? entry.endedAt : now);
   }
-  elements.finishDialog.showModal();
+  openDialog(elements.finishDialog);
 }
 
 /** Identifie l'observation visée par la fenêtre de constat/fin. */
@@ -366,7 +388,8 @@ export function getFinishTimestamp() {
 }
 
 /** Efface l'état temporaire et les bornes avant la prochaine ouverture. */
-export function closeFinishDialog() {
+export function closeFinishDialog(options = {}) {
+  if (!closeDialog(elements.finishDialog, options)) return false;
   finishingEntryId = null;
   correctingEntryEnd = false;
   addingPastPresence = false;
@@ -379,7 +402,7 @@ export function closeFinishDialog() {
     "L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.";
   elements.finishLabel.textContent = "Date et heure constatées";
   elements.finishSubmit.textContent = "Enregistrer la fin constatée";
-  elements.finishDialog.close();
+  return true;
 }
 
 /** Réinitialise complètement le formulaire avant une nouvelle saisie. */
@@ -394,7 +417,7 @@ export function resetEntryForm() {
     button.setAttribute("aria-pressed", "false");
   });
   elements.saveEntry.textContent = "Enregistrer";
-  elements.cancelEdit.hidden = true;
+  elements.cancelEdit.hidden = false;
   elements.entryForm.closest(".panel").querySelector("h2").textContent =
     "Nouvelle observation";
   setDefaultDateTime();
@@ -422,11 +445,12 @@ export function beginEntryEdit(entry, data, moduleId) {
   elements.cancelEdit.hidden = false;
   elements.entryForm.closest(".panel").querySelector("h2").textContent =
     "Modifier l’observation";
-  elements.entryForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  openDialog(document.querySelector("#entry-dialog"));
 }
 
 /** Affiche les options anatomiques seulement pour une zone Rhumato. */
 export function refreshCatalogBodyMapControls() {
+  refreshCatalogContext();
   const isZone =
     elements.catalogFamily.value === "rhumatologie" &&
     elements.catalogKind.value === "zone";
@@ -468,6 +492,13 @@ export function getCatalogFormInput() {
     family: elements.catalogFamily.value,
     kind: elements.catalogKind.value,
     bodyMap: getCatalogBodyMap(),
+    ...(elements.catalogFamily.value === "digestif"
+      ? {
+          config: readConfigChoices(
+            document.querySelector("#catalog-criteria"),
+          ),
+        }
+      : {}),
   };
 }
 
@@ -482,6 +513,7 @@ export function openCatalogDialog({
   item = null,
 } = {}) {
   editingCatalogId = item?.id || null;
+  catalogFamilyLocked = !item && family === "digestif";
   elements.catalogDialogTitle.textContent = item
     ? "Modifier un élément"
     : "Créer un élément";
@@ -515,15 +547,24 @@ export function openCatalogDialog({
     ? binding.surfaces.includes("back")
     : true;
   refreshCatalogBodyMapControls();
-  elements.catalogDialog.showModal();
+  refreshCatalogContext();
+  const config = getItemConfig(item || { family });
+  renderConfigChoices(
+    document.querySelector("#catalog-criteria"),
+    config,
+    refreshCatalogPreview,
+  );
+  refreshCatalogPreview();
+  openDialog(elements.catalogDialog);
   window.setTimeout(() => elements.catalogLabel.focus(), 0);
 }
 
 /** Réinitialise et ferme la fenêtre du catalogue. */
-export function closeCatalogDialog() {
+export function closeCatalogDialog(options = {}) {
+  if (!closeDialog(elements.catalogDialog, options)) return false;
   editingCatalogId = null;
   elements.catalogForm.reset();
-  elements.catalogDialog.close();
+  return true;
 }
 
 /** Met à jour le style et l'accessibilité d'un bouton de niveau. */
@@ -534,6 +575,11 @@ export function toggleLevelButton(button) {
 
 /** Affiche un retour bref après une action utilisateur. */
 export function showToast(message, type = "info") {
+  if (type === "error") {
+    const dialog = [...document.querySelectorAll("dialog[open]")].at(-1);
+    const error = dialog?.querySelector(".dialog-error");
+    if (error) error.textContent = message;
+  }
   elements.toast.textContent = message;
   elements.toast.dataset.type = type;
   elements.toast.hidden = false;
@@ -589,146 +635,8 @@ function renderStats(data, target) {
 }
 
 /** Construit l'historique commun à l'accueil et aux pages de module. */
-function renderHistory(
-  data,
-  target,
-  { moduleId = null, limit = Infinity, actions = false } = {},
-) {
-  target.replaceChildren();
-  const entries = (
-    moduleId ? filteredData(data, moduleId).entries : data.entries
-  )
-    .slice()
-    .sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
-  if (entries.length === 0) {
-    target.append(
-      createEmptyMessage(
-        moduleId
-          ? "Aucune observation dans ce module pour le moment."
-          : "Aucune observation enregistrée.",
-      ),
-    );
-    return;
-  }
-
-  for (const entry of entries.slice(0, limit)) {
-    const article = document.createElement("article");
-    article.className = "history-entry";
-    const itemNames = getEntrySelections(entry)
-      .map(({ itemId, regionId }) => {
-        const item = data.catalog.find((candidate) => candidate.id === itemId);
-        return item ? formatSelectionLabel(item, regionId) : null;
-      })
-      .filter(Boolean);
-    const header = document.createElement("div");
-    header.className = "history-header";
-    const title = document.createElement("strong");
-    title.textContent = itemNames.length
-      ? itemNames.join(" + ")
-      : "Élément indisponible";
-    const date = document.createElement("time");
-    date.dateTime = entry.occurredAt;
-    date.textContent = formatLocalDateTime(entry.occurredAt);
-    header.append(title, date);
-
-    const level = document.createElement("p");
-    level.className = "history-level";
-    level.textContent = formatLevelRange(entry.levels);
-    article.append(header, level);
-    if (entry.ongoing || entry.stillAt?.length || entry.endedAt) {
-      const episode = document.createElement("div");
-      episode.className = "episode-status";
-      const firstCheck = document.createElement("p");
-      firstCheck.className = "ongoing-badge";
-      firstCheck.textContent = "Début de l’épisode";
-      episode.append(firstCheck);
-      for (const timestamp of entry.stillAt || []) {
-        const check = document.createElement("p");
-        check.className = "episode-check";
-        check.textContent = `Encore présent le ${formatLocalDateTime(timestamp)}`;
-        episode.append(check);
-      }
-      if (entry.endedAt) {
-        const end = document.createElement("p");
-        end.className = "episode-end";
-        end.textContent = `Fin constatée le ${formatLocalDateTime(entry.endedAt)}`;
-        episode.append(end);
-      } else {
-        const unknown = document.createElement("p");
-        unknown.className = "episode-unknown";
-        unknown.textContent = "Fin non renseignée";
-        episode.append(unknown);
-      }
-      const durationText = formatMinimumDuration(getMinimumDurationMs(entry));
-      if (durationText) {
-        const duration = document.createElement("p");
-        duration.className = "episode-duration";
-        duration.textContent = durationText;
-        episode.append(duration);
-      } else {
-        const duration = document.createElement("p");
-        duration.className = "episode-duration";
-        duration.textContent =
-          "Pas assez de constats pour calculer une durée minimale.";
-        episode.append(duration);
-      }
-      article.append(episode);
-    }
-    if (entry.note) {
-      const note = document.createElement("p");
-      note.className = "history-note";
-      note.textContent = entry.note;
-      article.append(note);
-    }
-    if (actions) {
-      const controls = document.createElement("div");
-      controls.className = "history-actions";
-      // Toutes les observations, y compris V3, peuvent recevoir un constat passé.
-      const addPresenceButton = document.createElement("button");
-      addPresenceButton.type = "button";
-      addPresenceButton.className = "button button-secondary button-small";
-      addPresenceButton.dataset.addPresenceEntry = entry.id;
-      addPresenceButton.textContent = "Ajouter un constat passé";
-      controls.append(addPresenceButton);
-      if (!entry.endedAt) {
-        const stillPresentButton = document.createElement("button");
-        stillPresentButton.type = "button";
-        stillPresentButton.className = "button button-secondary button-small";
-        stillPresentButton.dataset.stillPresentEntry = entry.id;
-        stillPresentButton.textContent = "Encore maintenant";
-        stillPresentButton.setAttribute(
-          "aria-label",
-          `Noter que l’événement est encore présent : ${itemNames.join(", ")}`,
-        );
-        const finishButton = document.createElement("button");
-        finishButton.type = "button";
-        finishButton.className = "button button-secondary button-small";
-        finishButton.dataset.finishEntry = entry.id;
-        finishButton.textContent = "C’est terminé";
-        controls.append(stillPresentButton, finishButton);
-      } else {
-        const correctEndButton = document.createElement("button");
-        correctEndButton.type = "button";
-        correctEndButton.className = "button button-secondary button-small";
-        correctEndButton.dataset.editEntryEnd = entry.id;
-        correctEndButton.textContent = "Modifier l’heure de fin";
-        controls.append(correctEndButton);
-      }
-      const editButton = document.createElement("button");
-      editButton.type = "button";
-      editButton.className = "button button-secondary button-small";
-      editButton.dataset.editEntry = entry.id;
-      editButton.textContent = "Modifier";
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.className = "button button-danger button-small";
-      deleteButton.dataset.deleteEntry = entry.id;
-      deleteButton.textContent = "Supprimer";
-      controls.append(editButton, deleteButton);
-      article.append(controls);
-    }
-    target.append(article);
-  }
+function renderHistory(data, target, options = {}) {
+  renderUnifiedHistory(data, target, options);
 }
 
 /** Affiche les éléments du module et garde leur classement modifiable. */
@@ -938,7 +846,11 @@ export function renderAll(
   bodyMapState = { view: "front", region: null, showAllChoices: false },
 ) {
   document.querySelector("#catalog-title").textContent =
-    moduleId === "rhumatologie" ? "Zones enregistrées" : "Éléments enregistrés";
+    moduleId === "rhumatologie"
+      ? "Zones enregistrées"
+      : moduleId === "digestif"
+        ? "Symptômes et événements"
+        : "Éléments enregistrés";
   for (const id of Object.keys(MODULES)) {
     const count = data.catalog.filter((item) =>
       isItemInModule(item, id),
@@ -955,3 +867,36 @@ export function renderAll(
   renderCatalog(data, moduleId);
 }
 
+/** Adapter les choix au module sans modifier le classement des anciennes données. */
+function refreshCatalogContext() {
+  const digestive = elements.catalogFamily.value === "digestif";
+  const zone = elements.catalogKind.querySelector('option[value="zone"]');
+  zone.hidden = digestive;
+  zone.disabled = digestive;
+  if (digestive && elements.catalogKind.value === "zone")
+    elements.catalogKind.value = "symptome";
+  document.querySelector("#catalog-criteria-group").hidden = !digestive;
+  elements.catalogFamily.closest("label").hidden = catalogFamilyLocked;
+  elements.catalogDialogTitle.textContent = editingCatalogId
+    ? digestive
+      ? "Modifier le symptôme ou événement"
+      : "Modifier un élément"
+    : digestive
+      ? "Créer un symptôme ou événement digestif"
+      : "Créer une zone ou un symptôme";
+}
+
+function refreshCatalogPreview() {
+  const config = readConfigChoices(document.querySelector("#catalog-criteria"));
+  renderCriteriaFields(
+    document.querySelector("#catalog-preview"),
+    config,
+    initialValues(config),
+    { prefix: "preview", preview: true },
+  );
+  document.querySelector("#catalog-preview-actions").textContent =
+    config.criteria
+      .filter((key) => CRITERIA[key].type === "action")
+      .map((key) => CRITERIA[key].label)
+      .join(" · ");
+}

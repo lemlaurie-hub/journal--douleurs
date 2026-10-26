@@ -614,24 +614,189 @@ legend {
   font-size: 0.95rem;
 }
 
-
 /* Transit : une colonne de grandes cibles tactiles, même sur petit téléphone. */
-.digestive-actions { display: grid; gap: .75rem; margin: 1rem 0; }
-.bristol-row { display: flex; align-items: center; gap: .4rem; border: 1px solid #b5b7b0; border-radius: .75rem; margin: .5rem 0; padding: .4rem; }
-.bristol-choice { display: flex; align-items: center; gap: .6rem; flex: 1; cursor: pointer; min-height: 90px; min-width: 0; }
-.bristol-choice img { width: 100px; height: 75px; object-fit: contain; border-radius: .4rem; }
-.bristol-choice span { flex: 1; min-width: 0; }
-.bristol-row:has(input:checked) { outline: 3px solid #477552; background: #f0f7ed; color: #182c1e; }
-.transit-dialog { max-height: 92dvh; overflow-y: auto; width: min(96vw, 760px); }
-.bristol-enlarged { width: 100%; height: auto; max-height: 65dvh; object-fit: contain; }
-#transit-condition-list .catalog-row { flex-wrap: wrap; gap: .5rem; }
-#transit-bristol input { flex-shrink: 0; width: 22px; height: 22px; }
-#transit-pain { width: 100%; min-height: 44px; }
+.digestive-actions {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.bristol-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #b5b7b0;
+  border-radius: 0.75rem;
+  margin: 0.5rem 0;
+  padding: 0.4rem;
+}
+.bristol-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  cursor: pointer;
+  min-height: 90px;
+  min-width: 0;
+}
+.bristol-choice img {
+  width: 100px;
+  height: 75px;
+  object-fit: contain;
+  border-radius: 0.4rem;
+}
+.bristol-choice span {
+  flex: 1;
+  min-width: 0;
+}
+.bristol-row:has(input:checked) {
+  outline: 3px solid #477552;
+  background: #f0f7ed;
+  color: #182c1e;
+}
+.transit-dialog {
+  max-height: 92dvh;
+  overflow-y: auto;
+  width: min(96vw, 760px);
+}
+.bristol-enlarged {
+  width: 100%;
+  height: auto;
+  max-height: 65dvh;
+  object-fit: contain;
+}
+#transit-condition-list .catalog-row {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+#transit-bristol input {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+}
+#transit-pain {
+  width: 100%;
+  min-height: 44px;
+}
 @media (max-width: 420px) {
-  .bristol-choice img { width: 65px; height: 60px; }
-  .bristol-choice { gap: .35rem; font-size: .9rem; }
-  .bristol-row { gap: .2rem; }
-  .bristol-row > button { font-size: .75rem; padding: .4rem; }
+  .bristol-choice img {
+    width: 65px;
+    height: 60px;
+  }
+  .bristol-choice {
+    gap: 0.35rem;
+    font-size: 0.9rem;
+  }
+  .bristol-row {
+    gap: 0.2rem;
+  }
+  .bristol-row > button {
+    font-size: 0.75rem;
+    padding: 0.4rem;
+  }
 }
 
-.transit-error { color: #a42520; font-weight: 600; }
+.transit-error {
+  color: #a42520;
+  font-weight: 600;
+}
+
+/* Une seule barre d'actions par fiche, accessible pendant tout le défilement. */
+.dialog {
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dialog-toolbar {
+  position: sticky;
+  top: -1px;
+  z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0;
+  background: var(--surface, #fff);
+  border-bottom: 1px solid var(--border, #d5dee3);
+}
+.dialog-toolbar > button {
+  flex: 1;
+  min-height: 44px;
+}
+.dialog-error:empty {
+  display: none;
+}
+.dialog-error {
+  position: relative;
+}
+.transit-passage-group {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--border, #d5dee3);
+  border-radius: 0.8rem;
+}
+.transit-passage-group h3 {
+  margin: 0;
+}
+#transit-condition-list {
+  margin: 1rem 0;
+}
+#episode-fields input[type="range"] {
+  width: 100%;
+  min-height: 44px;
+}
+.history-family {
+  font-size: 0.9rem;
+  opacity: 0.85;
+}
+.episode-check {
+  margin: 0.6rem 0;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--border, #d5dee3);
+}
+
+.consultation-button {
+  background: transparent;
+  text-decoration: underline;
+  border-color: transparent;
+  text-align: left;
+}
+
+/* Les champs de date natifs ont une largeur minimale intrinsèque dans Chrome.
+   Ils doivent pouvoir se réduire dans une fenêtre sur téléphone de 320 px. */
+fieldset,
+.field,
+.field input,
+.field select,
+.field textarea {
+  min-width: 0;
+}
+.field input,
+.field select,
+.field textarea {
+  max-width: 100%;
+}
+input[type="range"] {
+  margin-inline: 0;
+}
+.dialog-toolbar > button {
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+/* À 320 px, l'agrandissement passe sous la ligne pour laisser au texte sa place. */
+@media (max-width: 360px) {
+  .bristol-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bristol-row > button {
+    justify-self: end;
+  }
+  .bristol-choice {
+    min-height: 65px;
+  }
+}
+.bristol-choice span {
+  overflow-wrap: anywhere;
+}

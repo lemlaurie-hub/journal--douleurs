@@ -1,13 +1,20 @@
 // Service worker V4. Incrémenter CACHE_NAME à chaque publication qui change le comportement.
-const CACHE_NAME = "journal-sante-v4-2026-10-26-transit-1";
+const CACHE_NAME = "journal-sante-v4-2026-10-26-lot2-1";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=4.7.0",
+  "./styles.css?v=4.8.0",
   "./manifest.webmanifest",
   "./icons/icon.svg",
-  "./src/app.js?v=4.7.0",
+  "./src/app.js?v=4.8.0",
   "./src/storage.js",
+  "./src/criteria.js",
+  "./src/criteria-ui.js",
+  "./src/dialogs.js",
+  "./src/episodes.js",
+  "./src/episode-ui.js",
+  "./src/history.js",
+  "./src/history-ui.js",
   "./src/digestive.js",
   "./src/digestive-ui.js",
   "./images/bristol-1.webp",
@@ -18,7 +25,7 @@ const APP_SHELL = [
   "./images/bristol-6.webp",
   "./images/bristol-7.webp",
   "./src/catalog.js",
-  "./src/entries.js?v=4.6.0",
+  "./src/entries.js?v=4.8.0",
   "./src/stats.js",
   "./src/ui.js",
   "./src/body-map.js",
@@ -69,4 +76,3 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
-

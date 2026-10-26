@@ -1,5 +1,13 @@
+import { createIndependentEntries } from "./episodes.js";
+import { setupEpisodeUi, handleEpisodeCommand } from "./episode-ui.js";
+import { setupDialogBars, openDialog, closeDialog } from "./dialogs.js";
 import { setupDigestive, renderDigestive } from "./digestive-ui.js";
-import { loadData, saveData, hasStorageReadError, getStorageKey } from "./storage.js";
+import {
+  loadData,
+  saveData,
+  hasStorageReadError,
+  getStorageKey,
+} from "./storage.js";
 import { createCatalogItem, updateCatalogItem } from "./catalog.js";
 import {
   addPastPresence,
@@ -9,7 +17,7 @@ import {
   recordStillPresent,
   updateEntry,
   updateEntryEnd,
-} from "./entries.js?v=4.6.0";
+} from "./entries.js?v=4.8.0";
 import { createBackup, mergeBackup } from "./transfer.js";
 import {
   closeCatalogDialog,
@@ -70,16 +78,31 @@ function persistAndRender() {
   renderCurrentView();
 }
 
+/** Transaction commune : une erreur de validation ou de quota ne modifie rien. */
+function transact(action) {
+  const next = structuredClone(data);
+  const result = action(next);
+  saveData(next);
+  for (const key of Object.keys(data)) delete data[key];
+  Object.assign(data, next);
+  renderCurrentView();
+  return result;
+}
+
 // Les formulaires appellent les commandes métier avant toute sauvegarde.
 function handleCatalogSubmit(event) {
   event.preventDefault();
 
   try {
     const catalogId = getEditingCatalogId();
-    if (catalogId) updateCatalogItem(data, catalogId, getCatalogFormInput());
-    else createCatalogItem(data, getCatalogFormInput());
-    persistAndRender();
-    closeCatalogDialog();
+    const input = getCatalogFormInput();
+    const item = transact((next) =>
+      catalogId
+        ? updateCatalogItem(next, catalogId, input)
+        : createCatalogItem(next, input),
+    );
+    closeCatalogDialog({ saved: true });
+    document.dispatchEvent(new CustomEvent("catalog-saved", { detail: item }));
     showToast(catalogId ? "Élément modifié." : "Élément ajouté.");
   } catch (error) {
     showToast(error.message, "error");
@@ -91,10 +114,14 @@ function handleEntrySubmit(event) {
 
   try {
     const entryId = getEditingEntryId();
-    if (entryId) updateEntry(data, entryId, getEntryFormInput());
-    else createEntry(data, getEntryFormInput());
+    const input = getEntryFormInput();
+    transact((next) =>
+      entryId
+        ? updateEntry(next, entryId, input)
+        : createIndependentEntries(next, input),
+    );
+    closeDialog(document.querySelector("#entry-dialog"), { saved: true });
     resetEntryForm();
-    persistAndRender();
     showToast(entryId ? "Observation corrigée." : "Observation enregistrée.");
   } catch (error) {
     showToast(error.message, "error");
@@ -147,7 +174,7 @@ function handleFinishSubmit(event) {
     if (addingPresence) addPastPresence(data, entryId, endedAt);
     else if (correctingEnd) updateEntryEnd(data, entryId, endedAt);
     else finishEntry(data, entryId, endedAt);
-    closeFinishDialog();
+    closeFinishDialog({ saved: true });
     persistAndRender();
     showToast(
       addingPresence
@@ -354,6 +381,11 @@ function registerEvents() {
   });
 
   elements.moduleHistory.addEventListener("click", (event) => {
+    const command = event.target.closest("[data-episode-command]");
+    if (command) {
+      handleEpisodeCommand(command);
+      return;
+    }
     const addPresenceButton = event.target.closest("[data-add-presence-entry]");
     if (addPresenceButton) {
       const entry = data.entries.find(
@@ -409,7 +441,16 @@ function registerEvents() {
     if (item) openCatalogDialog({ item });
   });
 
+  document.querySelector("#open-entry-dialog").addEventListener("click", () => {
+    resetEntryForm();
+    renderCurrentView();
+    openDialog(document.querySelector("#entry-dialog"));
+  });
+  document
+    .querySelector("#entry-dialog")
+    .addEventListener("close", resetEntryForm);
   elements.cancelEdit.addEventListener("click", () => {
+    if (!closeDialog(document.querySelector("#entry-dialog"))) return;
     resetEntryForm();
     renderCurrentView();
   });
@@ -442,12 +483,15 @@ if (
 
 // Les contrôles sont branchés avant le rendu : une erreur liée à l’affichage
 // ne transforme plus tout l’écran d’accueil en page inerte.
+setupEpisodeUi(data, transact, showToast, { openCatalog: openCatalogDialog });
 setupDigestive(data, persistAndRender, showToast);
+setupDialogBars();
 if (hasStorageReadError()) {
   const warning = document.createElement("p");
   warning.className = "panel transit-error";
   warning.setAttribute("role", "alert");
-  warning.textContent = "L’historique local n’a pas pu être lu. Les enregistrements sont bloqués pour le protéger. Ne te fie pas aux compteurs affichés. Le bouton de sauvegarde permet de récupérer la source enregistrée.";
+  warning.textContent =
+    "L’historique local n’a pas pu être lu. Les enregistrements sont bloqués pour le protéger. Ne te fie pas aux compteurs affichés. Le bouton de sauvegarde permet de récupérer la source enregistrée.";
   document.querySelector("main").prepend(warning);
 }
 registerEvents();
@@ -461,4 +505,3 @@ if (currentModule !== "rhumatologie") {
   }
 }
 renderCurrentView();
-

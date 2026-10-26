@@ -1,5 +1,7 @@
 import { normalizeBodyMap, normalizeItemLocations } from "./body-map.js";
 import { validateDigestive, mergeDigestive } from "./digestive.js";
+import { normalizeConfig } from "./criteria.js";
+import { validateEpisodeExtensions } from "./episodes.js";
 
 // Formats d'export et fonctions d'import/export de données.
 // Ce module ne lit ni n'écrit le stockage : l'appelant valide l'import puis
@@ -7,7 +9,7 @@ import { validateDigestive, mergeDigestive } from "./digestive.js";
 
 export const BACKUP_FORMAT = "journal-sante";
 // Les anciennes applications refusent le format 2 plutôt que perdre le transit.
-export const BACKUP_FORMAT_VERSION = 2;
+export const BACKUP_FORMAT_VERSION = 3;
 const DATA_SCHEMA_VERSION = 1;
 
 // Les opérations de transfert travaillent sur des copies pour préserver leurs entrées.
@@ -175,6 +177,7 @@ function validateData(data) {
     requireString(item?.label, `nom du catalogue (${index + 1})`);
     requireString(item?.family, `famille du catalogue (${index + 1})`);
     requireString(item?.kind, `type du catalogue (${index + 1})`);
+    if (item.config !== undefined) normalizeConfig(item.config);
     if (catalogIds.has(item.id)) {
       throw new Error(
         `Fichier invalide : identifiant de catalogue répété (${item.id}).`,
@@ -251,6 +254,7 @@ function validateData(data) {
       );
     }
     normalizeItemLocations(entry.itemLocations, entry.itemIds);
+    validateEpisodeExtensions(entry);
     entryIds.add(entry.id);
   }
 }
@@ -279,7 +283,7 @@ export function parseBackup(input) {
   }
 
   if (backup.format === BACKUP_FORMAT) {
-    if (![1, BACKUP_FORMAT_VERSION].includes(backup.formatVersion)) {
+    if (![1, 2, BACKUP_FORMAT_VERSION].includes(backup.formatVersion)) {
       throw new Error(
         `Version de sauvegarde non prise en charge : ${backup.formatVersion ?? "inconnue"}.`,
       );
@@ -295,7 +299,7 @@ export function parseBackup(input) {
 
 /** Clé métier utilisée pour reconnaître un élément déjà présent. */
 function catalogKey(item) {
-  return `${item.label.trim().toLocaleLowerCase("fr")}|${item.family}|${item.kind}|${stableStringify(normalizeBodyMap(item.bodyMap))}`;
+  return `${item.label.trim().toLocaleLowerCase("fr")}|${item.family}|${item.kind}|${stableStringify(normalizeBodyMap(item.bodyMap))}|${stableStringify(item.config || null)}`;
 }
 
 /** Retire l'identifiant pour comparer le contenu d'enregistrements. */
@@ -346,6 +350,7 @@ export function mergeBackup(currentData, backupInput) {
     const sameIdWithoutIncomingPlacement =
       byId &&
       !sourceItem.bodyMap &&
+      !sourceItem.config &&
       byId.label.trim().toLocaleLowerCase("fr") ===
         sourceItem.label.trim().toLocaleLowerCase("fr") &&
       byId.family === sourceItem.family &&
@@ -375,6 +380,17 @@ export function mergeBackup(currentData, backupInput) {
   for (const sourceEntry of incoming.entries) {
     const entry = clone(sourceEntry);
     entry.itemIds = entry.itemIds.map((id) => itemIdMap.get(id) || id);
+    if (entry.targetStates) {
+      entry.targetStates = Object.fromEntries(
+        Object.entries(entry.targetStates).map(([key, state]) => {
+          const [itemId, regionId] = JSON.parse(key);
+          return [
+            JSON.stringify([itemIdMap.get(itemId) || itemId, regionId]),
+            state,
+          ];
+        }),
+      );
+    }
     if (entry.itemLocations) {
       const locations = new Map();
       for (const [id, regions] of Object.entries(entry.itemLocations)) {
@@ -423,8 +439,11 @@ export function mergeBackup(currentData, backupInput) {
   if (currentData.digestive || incoming.digestive) {
     next.digestive = mergeDigestive(currentData.digestive, incoming.digestive);
   }
-  const digestiveAdded = (next.digestive?.events.length || 0) - (currentData.digestive?.events.length || 0);
-  const daysAdded = (next.digestive?.days.length || 0) - (currentData.digestive?.days.length || 0);
+  const digestiveAdded =
+    (next.digestive?.events.length || 0) -
+    (currentData.digestive?.events.length || 0);
+  const daysAdded =
+    (next.digestive?.days.length || 0) -
+    (currentData.digestive?.days.length || 0);
   return { data: next, catalogAdded, entriesAdded, digestiveAdded, daysAdded };
 }
-

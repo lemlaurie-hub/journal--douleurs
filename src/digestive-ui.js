@@ -1,6 +1,15 @@
+import { openDialog, closeDialog } from "./dialogs.js";
+import { openDigestiveSymptom } from "./episode-ui.js";
 import {
-  BRISTOL, getDigestive, localDate, saveTransit, deleteTransit,
-  confirmNoPassage, clearNoPassage, getTransitDay, saveCondition,
+  BRISTOL,
+  getDigestive,
+  localDate,
+  saveTransit,
+  deleteTransit,
+  confirmNoPassage,
+  clearNoPassage,
+  getTransitDay,
+  saveCondition,
 } from "./digestive.js";
 
 // Interface du transit : toutes les règles de données sont déléguées au moteur.
@@ -37,7 +46,9 @@ function attempt(action) {
   const before = structuredClone(data);
   const errorField = $("#transit-error");
   errorField.textContent = "";
-  try { action(); } catch (error) {
+  try {
+    action();
+  } catch (error) {
     // Quota ou lecture impossible : ne pas garder une modification non sauvegardée en mémoire.
     for (const key of Object.keys(data)) delete data[key];
     Object.assign(data, before);
@@ -47,14 +58,17 @@ function attempt(action) {
 }
 
 function selectedTypes() {
-  return [...$("#transit-bristol").querySelectorAll("input:checked")].map((input) => Number(input.value));
+  return [...$("#transit-bristol").querySelectorAll("input:checked")].map(
+    (input) => Number(input.value),
+  );
 }
 
 function updateBristolMode() {
   const types = selectedTypes();
   $("#transit-mode-group").hidden = types.length !== 2;
   const intermediate = $("#transit-mode-intermediate");
-  intermediate.disabled = types.length === 2 && Math.abs(types[0] - types[1]) !== 1;
+  intermediate.disabled =
+    types.length === 2 && Math.abs(types[0] - types[1]) !== 1;
   if (intermediate.disabled) $("#transit-mode-distinct").checked = true;
 }
 
@@ -64,7 +78,8 @@ function renderConditions(event = null) {
   const current = getDigestive(data).conditions;
   const choices = [...current];
   for (const snapshot of event?.conditions || []) {
-    if (!choices.some((c) => c.id === snapshot.id)) choices.push({ ...snapshot, active: false });
+    if (!choices.some((c) => c.id === snapshot.id))
+      choices.push({ ...snapshot, active: false });
   }
   for (const condition of choices) {
     const old = event?.conditions.find((c) => c.id === condition.id);
@@ -74,7 +89,13 @@ function renderConditions(event = null) {
     input.type = "checkbox";
     input.value = condition.id;
     input.checked = Boolean(old);
-    label.append(input, node("span", `${old?.label || condition.label}${condition.active ? "" : " (désactivée)"}`));
+    label.append(
+      input,
+      node(
+        "span",
+        `${old?.label || condition.label}${condition.active ? "" : " (désactivée)"}`,
+      ),
+    );
     target.append(label);
   }
 }
@@ -87,36 +108,48 @@ function openTransit(kind, event = null) {
   $("#transit-error").textContent = "";
   form.dataset.kind = event?.kind || kind;
   const passage = form.dataset.kind === "passage";
-  $("#transit-title").textContent = `${event ? "Modifier : " : ""}${passage ? "Passage aux toilettes" : "Ça s’est échappé"}`;
+  $("#transit-title").textContent =
+    `${event ? "Modifier : " : ""}${passage ? "Passage aux toilettes" : "Ça s’est échappé"}`;
   $("#transit-at").value = dateInput(event?.occurredAt || new Date());
   $("#transit-note").value = event?.note || "";
   $("#transit-passage-fields").hidden = !passage;
   $("#transit-pain").value = event?.pain ?? 0;
   $("#transit-pain-value").textContent = `${event?.pain ?? 0} / 10`;
   const types = event?.bristol.types || (passage ? [] : [7]);
-  $("#transit-bristol").querySelectorAll("input").forEach((input) => {
-    input.checked = types.includes(Number(input.value));
-  });
+  $("#transit-bristol")
+    .querySelectorAll("input")
+    .forEach((input) => {
+      input.checked = types.includes(Number(input.value));
+    });
   // Ne pas supposer la signification d'une double sélection : choix explicite.
   const mode = event?.bristol.mode;
   if (mode === "intermediate") $("#transit-mode-intermediate").checked = true;
   if (mode === "distinct") $("#transit-mode-distinct").checked = true;
   updateBristolMode();
   renderConditions(event);
-  $("#transit-dialog").showModal();
+  openDialog($("#transit-dialog"));
 }
 
 /** Conserve la précision originale si le champ minute n'a pas été changé. */
 function readTransit() {
-  const occurredAt = originalEvent && $("#transit-at").value === dateInput(originalEvent.occurredAt)
-    ? originalEvent.occurredAt : new Date($("#transit-at").value).toISOString();
+  const occurredAt =
+    originalEvent &&
+    $("#transit-at").value === dateInput(originalEvent.occurredAt)
+      ? originalEvent.occurredAt
+      : new Date($("#transit-at").value).toISOString();
   return {
     kind: $("#transit-form").dataset.kind,
     occurredAt,
-    bristol: { types: selectedTypes(), mode: $("#transit-form").querySelector('[name="transit-mode"]:checked')?.value },
+    bristol: {
+      types: selectedTypes(),
+      mode: $("#transit-form").querySelector('[name="transit-mode"]:checked')
+        ?.value,
+    },
     pain: Number($("#transit-pain").value),
     note: $("#transit-note").value,
-    conditionIds: [...$("#transit-conditions").querySelectorAll("input:checked")].map((input) => input.value),
+    conditionIds: [
+      ...$("#transit-conditions").querySelectorAll("input:checked"),
+    ].map((input) => input.value),
   };
 }
 
@@ -132,49 +165,6 @@ function showDay() {
         ? `${day.accidents} accident(s) enregistré(s). Les passages aux toilettes restent non renseignés.`
         : "Journée non renseignée.";
   $("#transit-confirm-none").disabled = Boolean(day.passages || day.noPassage);
-  $("#transit-clear-none").hidden = !day.noPassage;
-}
-
-function formatBristol(bristol) {
-  return bristol.types.length === 1 ? `Bristol ${bristol.types[0]}`
-    : `Bristol ${bristol.types.join(" + ")} — ${bristol.mode === "intermediate" ? "aspect intermédiaire" : "deux aspects présents"}`;
-}
-
-function renderTransitHistory() {
-  const target = $("#transit-history");
-  target.replaceChildren();
-  const state = getDigestive(data);
-  const rows = [
-    ...state.events.map((event) => ({ date: event.localDate, time: event.occurredAt, event })),
-    ...state.days.map((day) => ({ date: day.date, time: "", day })),
-  ].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
-  if (!rows.length) target.append(node("p", "Aucun transit enregistré.", "field-help"));
-  for (const row of rows) {
-    const article = node("article", undefined, "history-entry");
-    if (row.day) {
-      article.append(node("strong", `${new Intl.DateTimeFormat("fr-FR").format(new Date(`${row.date}T12:00:00`))} — Aucun passage aux toilettes`));
-      if (getTransitDay(data, row.date).accidents) article.append(node("p", "Un accident avec émission de selles est enregistré ce jour."));
-      article.append(button("Annuler cette confirmation", () => attempt(() => {
-        clearNoPassage(data, row.date); persist();
-      })));
-    } else {
-      const event = row.event;
-      article.append(node("strong", event.kind === "passage" ? "Passage aux toilettes" : "Ça s’est échappé"));
-      article.append(node("p", new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.occurredAt))));
-      article.append(node("p", formatBristol(event.bristol)));
-      if (event.kind === "passage") article.append(node("p", `Douleur à l’évacuation : ${event.pain} / 10`));
-      if (event.conditions.length) article.append(node("p", event.conditions.map((c) => c.label).join(" · ")));
-      if (event.note) article.append(node("p", event.note, "history-note"));
-      const actions = node("div", undefined, "form-actions");
-      actions.append(button("Modifier", () => openTransit(event.kind, event)));
-      actions.append(button("Supprimer", () => attempt(() => {
-        if (!window.confirm("Supprimer cet enregistrement de transit ?")) return;
-        deleteTransit(data, event.id); persist();
-      })));
-      article.append(actions);
-    }
-    target.append(article);
-  }
 }
 
 function renderConditionManager() {
@@ -183,23 +173,29 @@ function renderConditionManager() {
   for (const c of getDigestive(data).conditions) {
     const row = node("div", undefined, "catalog-row");
     row.append(node("span", `${c.label}${c.active ? "" : " (désactivée)"}`));
-    row.append(button("Renommer", () => {
-      editingConditionId = c.id;
-      $("#transit-condition-label").value = c.label;
-      $("#transit-condition-save").textContent = "Enregistrer le nom";
-      $("#transit-condition-cancel").hidden = false;
-      $("#transit-condition-label").focus();
-    }));
-    row.append(button(c.active ? "Désactiver" : "Réactiver", () => attempt(() => {
-      saveCondition(data, { label: c.label, active: !c.active }, c.id); persist();
-    })));
+    row.append(
+      button("Renommer", () => {
+        editingConditionId = c.id;
+        $("#transit-condition-label").value = c.label;
+        $("#transit-condition-save").textContent = "✓ Enregistrer";
+        $("#transit-condition-cancel").hidden = false;
+        $("#transit-condition-label").focus();
+      }),
+    );
+    row.append(
+      button(c.active ? "Désactiver" : "Réactiver", () =>
+        attempt(() => {
+          saveCondition(data, { label: c.label, active: !c.active }, c.id);
+          persist();
+        }),
+      ),
+    );
     target.append(row);
   }
 }
 
 export function renderDigestive() {
   if (!data) return;
-  renderTransitHistory();
   showDay();
   renderConditionManager();
 }
@@ -222,13 +218,21 @@ export function setupDigestive(state, persistAndRender, showToast) {
     image.alt = "";
     image.width = 120;
     image.height = 80;
-    label.append(input, image, node("span", `Type ${index + 1} — ${description}`));
-    row.append(label, button("Agrandir", () => {
-      $("#bristol-image").src = image.src;
-      $("#bristol-image").alt = `Type ${index + 1} — ${description}`;
-      $("#bristol-image-description").textContent = `Type ${index + 1} — ${description}`;
-      $("#bristol-image-dialog").showModal();
-    }));
+    label.append(
+      input,
+      image,
+      node("span", `Type ${index + 1} — ${description}`),
+    );
+    row.append(
+      label,
+      button("Agrandir", () => {
+        $("#bristol-image").src = image.src;
+        $("#bristol-image").alt = `Type ${index + 1} — ${description}`;
+        $("#bristol-image-description").textContent =
+          `Type ${index + 1} — ${description}`;
+        openDialog($("#bristol-image-dialog"));
+      }),
+    );
     list.append(row);
   }
   list.addEventListener("change", (event) => {
@@ -238,15 +242,24 @@ export function setupDigestive(state, persistAndRender, showToast) {
     }
     updateBristolMode();
   });
-  $("#transit-open-passage").addEventListener("click", () => openTransit("passage"));
-  $("#transit-open-accident").addEventListener("click", () => openTransit("accident"));
-  $("#transit-open-symptom").addEventListener("click", () => $("#entry-form").scrollIntoView({ behavior: "smooth" }));
+  $("#transit-open-passage").addEventListener("click", () =>
+    openTransit("passage"),
+  );
+  $("#transit-open-accident").addEventListener("click", () =>
+    openTransit("accident"),
+  );
+  $("#transit-open-symptom").addEventListener("click", openDigestiveSymptom);
   $("#transit-open-history").addEventListener("click", () => {
-    $("#transit-history-details").open = true;
-    $("#transit-history-details").scrollIntoView({ behavior: "smooth" });
+    const section = $("#module-history").closest("details");
+    section.open = true;
+    section.scrollIntoView({ behavior: "smooth" });
   });
-  $("#transit-close").addEventListener("click", () => $("#transit-dialog").close());
-  $("#bristol-image-close").addEventListener("click", () => $("#bristol-image-dialog").close());
+  $("#transit-close").addEventListener("click", () =>
+    closeDialog($("#transit-dialog")),
+  );
+  $("#bristol-image-close").addEventListener("click", () =>
+    closeDialog($("#bristol-image-dialog")),
+  );
   $("#transit-pain").addEventListener("input", (event) => {
     $("#transit-pain-value").textContent = `${event.target.value} / 10`;
   });
@@ -255,31 +268,81 @@ export function setupDigestive(state, persistAndRender, showToast) {
     attempt(() => {
       saveTransit(data, readTransit(), editingId);
       persist();
-      $("#transit-dialog").close();
+      closeDialog($("#transit-dialog"), { saved: true });
       notify("Transit enregistré.");
     });
   });
   $("#transit-day").addEventListener("change", showDay);
-  $("#transit-confirm-none").addEventListener("click", () => attempt(() => {
-    confirmNoPassage(data, $("#transit-day").value); persist();
-    notify("Absence de passage confirmée pour cette journée.");
-  }));
-  $("#transit-clear-none").addEventListener("click", () => attempt(() => {
-    clearNoPassage(data, $("#transit-day").value); persist();
-  }));
+  $("#transit-open-none").addEventListener("click", () => {
+    $("#transit-day").value = localDate();
+    $("#transit-day").max = localDate();
+    showDay();
+    openDialog($("#transit-day-dialog"));
+  });
+  $("#transit-day-cancel").addEventListener("click", () =>
+    closeDialog($("#transit-day-dialog")),
+  );
+  $("#transit-day-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    attempt(() => {
+      confirmNoPassage(data, $("#transit-day").value);
+      persist();
+      closeDialog($("#transit-day-dialog"), { saved: true });
+      notify("Absence de passage confirmée pour cette journée.");
+    });
+  });
+  $("#transit-open-conditions").addEventListener("click", () => {
+    resetCondition();
+    openDialog($("#transit-condition-dialog"));
+  });
+  $("#transit-conditions-close").addEventListener("click", () => {
+    if (closeDialog($("#transit-condition-dialog"))) resetCondition();
+  });
   const resetCondition = () => {
     editingConditionId = null;
     $("#transit-condition-label").value = "";
-    $("#transit-condition-save").textContent = "Ajouter";
+    $("#transit-condition-save").textContent = "✓ Enregistrer";
     $("#transit-condition-cancel").hidden = true;
   };
   $("#transit-condition-cancel").addEventListener("click", resetCondition);
   $("#transit-condition-form").addEventListener("submit", (event) => {
     event.preventDefault();
     attempt(() => {
-      const existing = getDigestive(data).conditions.find((c) => c.id === editingConditionId);
-      saveCondition(data, { label: $("#transit-condition-label").value, active: existing?.active ?? true }, editingConditionId);
-      persist(); resetCondition();
+      const existing = getDigestive(data).conditions.find(
+        (c) => c.id === editingConditionId,
+      );
+      saveCondition(
+        data,
+        {
+          label: $("#transit-condition-label").value,
+          active: existing?.active ?? true,
+        },
+        editingConditionId,
+      );
+      persist();
+      resetCondition();
+    });
+  });
+  $("#module-history").addEventListener("click", (event) => {
+    const button = event.target.closest(
+      "[data-transit-edit],[data-transit-delete],[data-day-clear]",
+    );
+    if (!button) return;
+    attempt(() => {
+      if (button.dataset.transitEdit) {
+        const transit = getDigestive(data).events.find(
+          (row) => row.id === button.dataset.transitEdit,
+        );
+        if (transit) openTransit(transit.kind, transit);
+      } else if (button.dataset.transitDelete) {
+        if (!window.confirm("Supprimer cet enregistrement de transit ?"))
+          return;
+        deleteTransit(data, button.dataset.transitDelete);
+        persist();
+      } else {
+        clearNoPassage(data, button.dataset.dayClear);
+        persist();
+      }
     });
   });
   renderDigestive();

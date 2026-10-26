@@ -1,5 +1,7 @@
 import { reclassifyKnownV3Items } from "./catalog.js";
 import { validateDigestive } from "./digestive.js";
+import { normalizeConfig } from "./criteria.js";
+import { validateEpisodeExtensions } from "./episodes.js";
 
 // Couche de stockage unique de la V4.
 // Toute lecture/écriture des données locales passe par ce fichier.
@@ -52,6 +54,10 @@ export function loadData() {
           : { theme: "system" },
     };
     validateDigestive(data.digestive);
+    data.catalog.forEach((item) => {
+      if (item.config !== undefined) normalizeConfig(item.config);
+    });
+    data.entries.forEach(validateEpisodeExtensions);
 
     // Correction additive et idempotente : les migraines exactes importées de
     // la V3 deviennent des symptômes. Les observations et leurs dates restent intactes.
@@ -78,9 +84,15 @@ export function loadData() {
 /** Écrit une forme de données stable sans toucher à la clé de la V3. */
 export function saveData(data) {
   if (storageReadFailed) {
-    throw new Error("La lecture des données a échoué. Enregistrement bloqué pour préserver l’historique : recharge l’application après récupération de la sauvegarde.");
+    throw new Error(
+      "La lecture des données a échoué. Enregistrement bloqué pour préserver l’historique : recharge l’application après récupération de la sauvegarde.",
+    );
   }
   validateDigestive(data.digestive);
+  data.catalog.forEach((item) => {
+    if (item.config !== undefined) normalizeConfig(item.config);
+  });
+  data.entries.forEach(validateEpisodeExtensions);
   const safeData = {
     ...data,
     schemaVersion: SCHEMA_VERSION,
@@ -103,4 +115,3 @@ export function getStorageKey() {
 export function hasStorageReadError() {
   return storageReadFailed;
 }
-

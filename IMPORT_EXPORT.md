@@ -2,7 +2,9 @@
 
 ## Sauvegarde V4
 
-Le bouton de sauvegarde télécharge un JSON versionné contenant le schéma V4 (`catalog`, `entries`, `settings`). L'import valide le fichier avant toute écriture, puis fusionne les données en une opération locale. Les données présentes ne sont jamais supprimées ni remplacées.
+Le bouton de sauvegarde télécharge un JSON versionné contenant le schéma V4 (`catalog`, `entries`, `settings`, extension optionnelle `digestive`). L'import valide le fichier avant toute écriture, puis fusionne les données en une opération locale. Les données présentes ne sont jamais supprimées ni remplacées.
+
+Le format exporté est numéroté **3** ; les formats de sauvegarde 1 et 2 restent acceptés. Il conserve les configurations des symptômes, leurs instantanés historiques, les constats enrichis, les suivis par zone et les groupes d’occurrences. Une ancienne application refuse ce numéro récent au lieu de perdre silencieusement ces données.
 
 Les dates de saisie sont transportées comme chaînes ISO, sans conversion de fuseau ni réécriture. Les notes et champs d'historique sont conservés.
 
@@ -30,3 +32,11 @@ La V3 n'exporte pas encore de fichier JSON par elle-même. Son historique étant
 `npm test` exécute le test Node. Les cas couvrent le JSON V4, la fusion non destructive, l'idempotence, les collisions d'identifiants, les deux formes V3, les refus de données mal formées et la conservation des événements identiques.
 
 Avant publication, incrémenter la version des ressources dans `index.html` et le nom du cache dans `sw.js`, puis vérifier l'installation et l'import sur téléphone.
+
+## Cas de conflits et données historiques
+
+Une collision d’identifiant ne remplace jamais la donnée locale : les deux contenus sont conservés. Les références au catalogue dans les localisations et les clés du suivi par cible sont remappées. Une nouvelle importation du même contenu n’ajoute aucun doublon.
+
+Les champs retirés d’un formulaire restent dans les observations historiques ; les champs nouvellement ajoutés n’y reçoivent aucune valeur automatique. Les identifiants d’origine cités dans une trace de clôture sont conservés comme provenance et ne servent jamais à rouvrir un épisode lors d’une modification/suppression.
+
+La validation est complète avant sauvegarde ; un fichier incohérent, notamment une configuration inconnue ou un constat incompatible avec le début/la fin, est refusé sans fusion partielle.

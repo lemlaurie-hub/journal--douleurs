@@ -1,4 +1,5 @@
 import { normalizeBodyMap } from "./body-map.js";
+import { normalizeConfig } from "./criteria.js";
 
 // Gestion centralisée du catalogue d'éléments de suivi.
 // Une seule fonction crée un élément, quel que soit l'écran qui l'appelle.
@@ -28,6 +29,10 @@ export function createCatalogItem(data, input) {
   const family = String(input.family || "").trim();
   const kind = String(input.kind || "").trim();
   const bodyMap = normalizeBodyMap(input.bodyMap);
+  const config =
+    input.config === undefined ? undefined : normalizeConfig(input.config);
+  if (family === "digestif" && kind === "zone")
+    throw new Error("Choisis Symptôme ou Événement dans Digestif.");
   if (bodyMap && (family !== "rhumatologie" || kind !== "zone")) {
     throw new Error(
       "Le rattachement au bonhomme est réservé aux zones Rhumato.",
@@ -66,6 +71,7 @@ export function createCatalogItem(data, input) {
   };
 
   if (bodyMap) item.bodyMap = bodyMap;
+  if (config) item.config = config;
   data.catalog.push(item);
   return item;
 }
@@ -84,6 +90,10 @@ export function updateCatalogItem(data, itemId, input) {
   const family = String(input.family || "").trim();
   const kind = String(input.kind || "").trim();
   const bodyMap = normalizeBodyMap(input.bodyMap);
+  const config =
+    input.config === undefined ? undefined : normalizeConfig(input.config);
+  if (family === "digestif" && kind === "zone")
+    throw new Error("Choisis Symptôme ou Événement dans Digestif.");
   if (bodyMap && (family !== "rhumatologie" || kind !== "zone")) {
     throw new Error(
       "Le rattachement au bonhomme est réservé aux zones Rhumato.",
@@ -107,6 +117,7 @@ export function updateCatalogItem(data, itemId, input) {
     throw new Error("Cet élément existe déjà dans cette catégorie.");
 
   Object.assign(item, { label, family, kind });
+  if (config) item.config = config;
   if (bodyMap) item.bodyMap = bodyMap;
   else if (
     input.bodyMap !== undefined ||

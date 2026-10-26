@@ -1,4 +1,6 @@
 import { getEntrySelections, formatSelectionLabel } from "./body-map.js";
+import { getEpisodeViews, getPresenceChecks } from "./episodes.js";
+import { localDate } from "./digestive.js";
 
 // Moteur statistique commun : les vues affichent ces résultats sans les
 // recalculer séparément, pour garder un seul sens aux compteurs.
@@ -7,10 +9,20 @@ import { getEntrySelections, formatSelectionLabel } from "./body-map.js";
 export function calculateStats(data) {
   const itemCounts = new Map();
   const days = new Set();
+  for (const event of data.digestive?.events || []) days.add(event.localDate);
+  for (const day of data.digestive?.days || []) days.add(day.date);
 
   for (const entry of data.entries) {
     if (entry.occurredAt) {
-      days.add(entry.occurredAt.slice(0, 10));
+      days.add(localDate(entry.occurredAt));
+    }
+    // Uniquement des journées explicitement documentées, jamais celles entre
+    // deux constats espacés. Les anciennes saisies groupées se dédupliquent.
+    for (const view of getEpisodeViews(entry)) {
+      getPresenceChecks(view).forEach((check) =>
+        days.add(localDate(check.occurredAt)),
+      );
+      if (view.endedAt) days.add(localDate(view.endedAt));
     }
 
     // Chaque côté est compté séparément quand l'observation le précise.
@@ -42,12 +54,17 @@ export function calculateStats(data) {
     .slice(0, 8);
 
   return {
-    totalEntries: data.entries.length,
+    totalEntries:
+      data.entries.length +
+      (data.digestive?.events.length || 0) +
+      (data.digestive?.days.length || 0),
     activeDays: days.size,
     // Sans heure de fin, le dossier reste ouvert, même si la dernière
     // confirmation de présence remonte à plusieurs jours.
-    ongoingEntries: data.entries.filter(
-      (entry) => entry.ongoing && !entry.endedAt,
+    ongoingEntries: data.entries.filter((entry) =>
+      getEpisodeViews(entry).some(
+        (view) => view.ongoing && !view.endedAt && !view.closedUnknown,
+      ),
     ).length,
     topItems,
   };
