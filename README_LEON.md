@@ -1,6 +1,6 @@
 # README_LEON — consignes de développement
 
-Ce document sert de passation pour tout assistant qui reprend le projet **Journal de suivi santé**. Il décrit la méthode de travail convenue avec Laurie. Le dépôt reste la source de vérité technique : toujours lire le code réel avant d'agir.
+Ce document sert de passation pour tout assistant qui reprend le projet **Journal de suivi santé**. Il décrit la méthode de travail convenue avec l’utilisatrice. Le dépôt reste la source de vérité technique : toujours lire le code réel avant d'agir.
 
 ## Objectif du projet
 
@@ -32,7 +32,7 @@ Lorsqu'une anomalie est signalée :
 
 Ne pas masquer un écart avec une constante, une régularisation artificielle ou une correction uniquement visuelle.
 
-Si plusieurs causes restent plausibles, les expliquer à Laurie et préciser ce qui manque pour les départager.
+Si plusieurs causes restent plausibles, les expliquer à l’utilisatrice et préciser ce qui manque pour les départager.
 
 ## 3. Une règle métier, une seule source de vérité
 
@@ -79,12 +79,12 @@ Aucune suppression ou réinitialisation large sans accord explicite.
 
 Le travail suit quatre étapes distinctes, dans cet ordre :
 
-1. **Réflexion commune.** Écouter tous les points de Laurie, lire et diagnostiquer sans modifier le code. Une idée, une précision ou un « oui » pendant cette discussion ne signifie pas que la réflexion est terminée.
-2. **Développement après accord.** Attendre que Laurie indique explicitement que la réflexion est terminée et qu'on peut coder. Puis développer et tester les changements convenus.
+1. **Réflexion commune.** Écouter tous les points de l’utilisatrice, lire et diagnostiquer sans modifier le code. Une idée, une précision ou un « oui » pendant cette discussion ne signifie pas que la réflexion est terminée.
+2. **Développement après accord.** Attendre que l’utilisatrice indique explicitement que la réflexion est terminée et qu'on peut coder. Puis développer et tester les changements convenus.
 3. **Bilan.** Présenter ce qui a été fait, les tests, les limites et ce qui reste à faire.
-4. **Publication après validation séparée.** Attendre l'accord explicite de Laurie pour publier, puis publier et vérifier le dépôt distant.
+4. **Publication après validation séparée.** Attendre l'accord explicite de l’utilisatrice pour publier, puis publier et vérifier le dépôt distant.
 
-Ne pas démarrer une longue phase de développement alors que Laurie expose encore ses points. Ne pas confondre accord sur une règle, accord pour coder et accord pour publier.
+Ne pas démarrer une longue phase de développement alors que l’utilisatrice expose encore ses points. Ne pas confondre accord sur une règle, accord pour coder et accord pour publier.
 
 ## 6. Tester réellement
 
@@ -160,7 +160,7 @@ Les tests du suivi d'épisode vérifient que chaque clic « Encore maintenant »
 
 ## 10. Publication GitHub
 
-Ne pas utiliser `git push` si l'environnement ne possède pas d'identifiants Git. Ne demander à Laurie ni jeton, ni mot de passe, ni clé SSH.
+Ne pas utiliser `git push` si l'environnement ne possède pas d'identifiants Git. Ne demander à l’utilisatrice ni jeton, ni mot de passe, ni clé SSH.
 
 Utiliser l'interface GitHub connectée :
 
@@ -176,7 +176,7 @@ Il est normal que le SHA final sur GitHub soit différent d'un éventuel commit 
 
 Ne jamais annoncer que c'est publié avant d'avoir vérifié le dépôt distant.
 
-## 11. Manière de communiquer avec Laurie
+## 11. Manière de communiquer avec l’utilisatrice
 
 - Distinguer clairement les faits, les hypothèses et les incertitudes.
 - Ne pas inventer une explication quand les données manquent.
@@ -187,12 +187,12 @@ Ne jamais annoncer que c'est publié avant d'avoir vérifié le dépôt distant.
 - Ne pas transformer une hypothèse ancienne en règle définitive.
 - Rester concis, mais expliquer le raisonnement lorsque le problème est complexe.
 
-## 12. Préserver l'autonomie de Laurie
+## 12. Préserver l'autonomie de l’utilisatrice
 
 - Le code doit être lisible et abondamment commenté.
 - Les noms de fonctions et de variables doivent être explicites.
 - Les modifications importantes doivent être découpées en étapes compréhensibles.
-- L'objectif est que Laurie puisse relire, comprendre et modifier progressivement le projet sans dépendre d'une seule conversation.
+- L'objectif est que l’utilisatrice puisse relire, comprendre et modifier progressivement le projet sans dépendre d'une seule conversation.
 
 ## 13. Non-acharnement technique
 
@@ -200,7 +200,7 @@ Ne pas tourner en rond sur une même approche.
 
 - Une méthode qui échoue peut faire l'objet d'au maximum **3 tentatives réellement différentes**.
 - Si elle reste bloquée, changer d'approche au lieu d'empiler des rustines ou de répéter les mêmes manipulations.
-- Si plusieurs approches raisonnables échouent, arrêter et faire à Laurie un état des lieux clair : ce qui fonctionne, ce qui bloque, ce qui a été essayé et les alternatives possibles.
+- Si plusieurs approches raisonnables échouent, arrêter et faire à l’utilisatrice un état des lieux clair : ce qui fonctionne, ce qui bloque, ce qui a été essayé et les alternatives possibles.
 - Si une solution devient anormalement tordue ou fragile, considérer cela comme un signal pour changer de voie.
 
 ## Architecture V4 initiale
@@ -261,11 +261,11 @@ Un seul élément de catalogue (ex. « Ongles ») peut être rattaché aux deux 
 
 ### Vérification d’interface restant à faire
 
-Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un navigateur local n'a pas pu être exécuté : aucun exécutable Chromium n'est installé et son téléchargement a échoué (archive invalide). Ne pas présenter l'interface mobile comme testée. Vérifier : créer « Ongles » une fois pour les deux mains, choisir face/dos, sélectionner les deux côtés, retirer un seul côté depuis les sélections, sauvegarder/recharger, modifier l'observation, modifier le rattachement et vérifier que l'ancien côté reste intact. Vérifier aussi l'ouverture/fermeture des rubriques Historique et Zones enregistrées. Laurie a autorisé la publication le 18 octobre 2026 après avoir été informée de cette limite ; le contrôle visuel reste à effectuer.
+Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un navigateur local n'a pas pu être exécuté : aucun exécutable Chromium n'est installé et son téléchargement a échoué (archive invalide). Ne pas présenter l'interface mobile comme testée. Vérifier : créer « Ongles » une fois pour les deux mains, choisir face/dos, sélectionner les deux côtés, retirer un seul côté depuis les sélections, sauvegarder/recharger, modifier l'observation, modifier le rattachement et vérifier que l'ancien côté reste intact. Vérifier aussi l'ouverture/fermeture des rubriques Historique et Zones enregistrées. l’utilisatrice a autorisé la publication le 18 octobre 2026 après avoir été informée de cette limite ; le contrôle visuel reste à effectuer.
 
 ## Lot 1 Digestif — développement local du 26 octobre 2026
 
-État : publication autorisée le 26 octobre 2026 pour tests par Laurie ; moteur testé, contrôle Android restant à faire. Le cahier des charges et les arbitrages sont dans `docs/CAHIER_DES_CHARGES_DIGESTIF.md`.
+État : publication autorisée le 26 octobre 2026 pour tests par l’utilisatrice ; moteur testé, contrôle Android restant à faire. Le cahier des charges et les arbitrages sont dans `docs/CAHIER_DES_CHARGES_DIGESTIF.md`.
 
 - `src/digestive.js` : validation Bristol, commandes de transit, conditions, jours et fusion additive.
 - `src/digestive-ui.js` : un seul éditeur création/correction, historique transit, jours sans passage et conditions.
@@ -275,14 +275,14 @@ Le moteur est couvert par les tests automatisés. Le contrôle visuel dans un na
 - La confirmation quotidienne signifie aucun passage aux toilettes. Un accident peut coexister et interdit de compter ce jour comme sans émission de selles. Un passage ajouté corrige la confirmation contradictoire ; sa suppression ne recrée pas cette confirmation.
 - Les sauvegardes exportent le format 2 et lisent les formats 1 et 2, ainsi que la V3. Ce numéro protège contre une restauration silencieusement incomplète dans une ancienne application. La fusion remappe les collisions digestives et ne remplace aucune observation.
 - Une lecture du stockage invalide/inconnue bloque toute écriture jusqu'à un chargement réussi et affiche un avertissement. Les propriétés racine inconnues sont conservées à la sauvegarde.
-- Sept visuels originaux générés par imagegen sont dans `images/bristol-1.webp` à `bristol-7.webp`, chargés localement et inclus dans le cache. Les formes ont été contrôlées avec les descriptions du NHS : https://www.england.nhs.uk/wp-content/uploads/2023/07/Bristol-stool-chart-for-carer-web-version.pdf. Illustrations validées par Laurie le 26 octobre 2026.
+- Sept visuels originaux générés par imagegen sont dans `images/bristol-1.webp` à `bristol-7.webp`, chargés localement et inclus dans le cache. Les formes ont été contrôlées avec les descriptions du NHS : https://www.england.nhs.uk/wp-content/uploads/2023/07/Bristol-stool-chart-for-carer-web-version.pdf. Illustrations validées par l’utilisatrice le 26 octobre 2026.
 - Les règles de suivi des anciennes observations restent inchangées dans ce lot. Le fractionnement des saisies simultanées, les constats enrichis et la clôture ciblée sont réservés au lot 2.
 - Rapports médicaux, statistiques spécialisées, historique entrelacé et notifications restent à réaliser dans leurs lots.
 - Tests : `npm test`. Vérification du navigateur indisponible : installation Chromium échouée (archive téléchargée invalide). Ne pas annoncer de test mobile réel.
 
 ## Lot 2 — symptômes configurables et corrections d’ergonomie
 
-État : **publication de la version 4.8.0 autorisée par Laurie le 26 octobre 2026 pour tests sur son téléphone**. Accord de développement explicite de Laurie après les retours du lot 1. Les décisions détaillées sont dans `docs/LOT_2_DECISIONS.md` et le bilan dans `docs/BILAN_LOT_2.md`.
+État : **publication de la version 4.8.0 autorisée par l’utilisatrice le 26 octobre 2026 pour tests sur son téléphone**. Accord de développement explicite de l’utilisatrice après les retours du lot 1. Les décisions détaillées sont dans `docs/LOT_2_DECISIONS.md` et le bilan dans `docs/BILAN_LOT_2.md`.
 
 ### Moteurs communs
 
@@ -310,13 +310,13 @@ Le schéma racine reste 1 ; le format de sauvegarde passe à **3**, avec lecture
 
 - `npm test` : 83 tests réussis pour le moteur et le précache. Les 58 tests antérieurs sont conservés.
 - `tests/browser-lot2.mjs` exécute une série de scénarios réels avec Playwright, serveur local intégré et données synthétiques : création/édition, modalités, abandon, historique, anciennes données, réimportation, petits écrans et hors ligne. Les outils du navigateur ne font pas partie de l’application.
-- Chromium a pu être installé pour ce lot via un paquet de distribution, contrairement au téléchargement standard qui avait échoué auparavant. Les essais ont réellement été exécutés. Cela ne remplace pas une validation sur le téléphone Android de Laurie.
-- Les ressources et le cache sont préparés pour la version 4.8.0. Accord distinct de publication donné par Laurie le 26 octobre 2026 pour tests. Vérifier `main`, les ressources distantes et GitHub Pages avant d’annoncer la mise en ligne.
+- Chromium a pu être installé pour ce lot via un paquet de distribution, contrairement au téléchargement standard qui avait échoué auparavant. Les essais ont réellement été exécutés. Cela ne remplace pas une validation sur le téléphone Android de l’utilisatrice.
+- Les ressources et le cache sont préparés pour la version 4.8.0. Accord distinct de publication donné par l’utilisatrice le 26 octobre 2026 pour tests. Vérifier `main`, les ressources distantes et GitHub Pages avant d’annoncer la mise en ligne.
 - Pour une publication atomique incluant plusieurs nouveaux modules/illustrations, l’interface GitHub peut créer les blobs, un arbre basé sur la tête vérifiée, puis un seul commit et un déplacement non forcé de `main`. Cela évite un déploiement intermédiaire incomplet. Ne jamais utiliser `git push` sans identifiants ni écraser une tête distante qui a changé.
 
 ## Correctifs du 27 octobre 2026 — version 4.8.1 préparée
 
-Développement autorisé par la liste explicite de correctifs de Laurie ; **publication autorisée séparément par Laurie le 27 octobre 2026 après validation du bilan**. Base distante vérifiée : `3cec3eb4a721683527ba89dc1b2d9936de0a1260`. Détails : `docs/BILAN_CORRECTIFS_2026_10_27.md`.
+Développement autorisé par la liste explicite de correctifs de l’utilisatrice ; **publication autorisée séparément par l’utilisatrice le 27 octobre 2026 après validation du bilan**. Base distante vérifiée : `3cec3eb4a721683527ba89dc1b2d9936de0a1260`. Détails : `docs/BILAN_CORRECTIFS_2026_10_27.md`.
 
 - Paramètres via roue dentée, catalogue commun toutes familles et conditions dans les éditeurs existants. `ensureDigestivePresets` matérialise les sept propositions sans créer d'observation ; `presetKey` conserve leur identité après renommage. Le sélecteur utilise `getDigestiveSymptomChoices`.
 - Tous les critères numériques 0–10 utilisent `scale` et `bindNumericRange`, y compris la douleur du transit. Zéro, vide et ancienne valeur absente restent distincts. Rhumato conserve ses niveaux qualitatifs.
@@ -326,3 +326,27 @@ Développement autorisé par la liste explicite de correctifs de Laurie ; **publ
 - Statistiques et Historique fermés à chaque entrée dans le module ; les rendus après enregistrement ne changent pas leur ouverture. L'état n'est pas stocké.
 - Aucun changement du schéma 1 ni du format de sauvegarde 3. Ressources/cache préparés pour 4.8.1 ; publication autorisée, vérifier le déploiement distant.
 - Tests : 96 tests moteur et 28 parcours Chromium (16 du lot 2 + 12 correctifs), données synthétiques. Le contrôle Android réel reste à effectuer après publication autorisée.
+
+## Audit des actions communes — 4.8.2, non publiée
+
+Demande explicite de l’utilisatrice le 27 octobre 2026. Base distante : `61f1465b7ce1683691f71a53db0120ef3907401d`. Le bilan est dans `docs/AUDIT_ACTIONS_COMMUNES_2026_10_27.md` ; attendre sa validation et l'autorisation distincte de publication.
+
+- Cette décision remplace le constat immédiat d'accueil de 4.8.1 : tous les boutons Encore maintenant ouvrent la même fiche `openEpisodeAction("still")`. Aucun constat n'est créé avant Enregistrer ; Annuler n'en crée pas.
+- `getLastKnownIntensity` dans `episodes.js` propose les dernières intensités connues de la cible/épisode jusqu'à l'heure du clic. Recherche indépendante par critère numérique, zéro conservé, absences sautées, niveaux qualitatifs conservés. Commentaires et localisations non recopiés ; aucune réécriture historique. Sans mesure connue, laisser inconnu, pas zéro initial de nouvelle douleur.
+- Les constats passés sans heure choisie et l'édition d'anciens constats n'héritent pas de ce préremplissage ; ils gardent respectivement des champs inconnus ou leurs valeurs propres.
+- Toutes les commandes occurrence sauvegardent le fait à l'heure du clic via `addOccurrence`, puis ouvrent directement l'éditeur commun. Fermer la fiche ou abandonner ses détails ne supprime pas l'occurrence. Enregistrer conserve son identifiant et son heure précise.
+- Les branchements temporels legacy et leur ancienne fenêtre sont supprimés de l'interface, après vérification de l'absence de boutons les produisant. Les fonctions historiques de `entries.js` restent exportées et testées. `updateEntry` reste utilisé pour les associations d'origine ; tout suivi temporel, y compris V3, utilise `episodes.js` et son éditeur.
+- Aucun changement de schéma ni migration des observations. Version/cache 4.8.2 préparés localement.
+- Vérifications : 105 tests automatisés ; 28 anciens parcours Chromium adaptés ; sept matrices sur 14 combinaisons type/point d'entrée. Détails, limites et fixtures synthétiques dans le bilan.
+
+## Audit général consolidé — 4.8.2 en attente de validation
+
+La demande complémentaire de l’utilisatrice inclut le travail `cd426b9` sur les actions communes ; ne pas le remplacer par la branche distante 4.8.1. Le bilan actuel de référence est `docs/BILAN_AUDIT_GENERAL_2026_10_27.md`. **Aucune publication sans validation de ce bilan.**
+
+- `src/transactions.js` porte la frontière `transactData` : commande sur copie, validation/sérialisation/sauvegarde, puis publication dans la référence partagée. En cas d'échec, mémoire et stockage restent dans leur état précédent. L'affichage vient après la sauvegarde et ne déclenche jamais de restauration locale de données déjà écrites.
+- Toutes les écritures d'interface passent par l'adaptateur `transact` de `app.js`, y compris carte corporelle, transit, conditions, journées et import. `persistAndRender` et la restauration propre au digestif sont supprimés.
+- La migration ciblée des anciennes migraines utilise la même frontière. Si elle ne peut pas être enregistrée, conserver le classement persistant et réessayer au prochain chargement ; ne pas retourner un catalogue migré uniquement en mémoire et ne pas vider l'historique.
+- `calculateStats(data, {moduleId})` utilise les projections d'historique. Une ancienne saisie groupée multi-module ne doit pas laisser le suivi d'une autre cible fausser le compteur du module. Les observations sources restent dédupliquées ; les constats ne deviennent pas des observations supplémentaires.
+- `isItemInModule` est centralisé dans `catalog.js` et partagé par les choix, l'historique et les statistiques. Une famille importée inconnue reste consultable dans Symptômes / événements sans reclassement de ses données brutes.
+- Tests consolidés : 130 automatisés, 37 parcours navigateur et sept matrices sur 14 combinaisons. Les nouveaux scénarios injectent un échec réel de stockage et comparent l'export mémoire au disque et aux compteurs. Fixtures synthétiques uniquement. Contrôle Android réel restant à faire.
+- Schéma 1 et format de sauvegarde 3 inchangés. 4.8.2 et son précache, incluant `transactions.js`, sont préparés localement ; la version distante vérifiée reste 4.8.1.

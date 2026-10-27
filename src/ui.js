@@ -6,7 +6,7 @@ import {
   renderCriteriaFields,
 } from "./criteria-ui.js";
 import { openDialog, closeDialog } from "./dialogs.js";
-import { getFamilyLabel, getKindLabel } from "./catalog.js";
+import { getFamilyLabel, getKindLabel, isItemInModule } from "./catalog.js";
 import {
   BODY_MAP_REGIONS,
   BODY_MAP_GROUPS,
@@ -14,7 +14,6 @@ import {
   getEntrySelections,
   formatSelectionLabel,
 } from "./body-map.js";
-import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.1";
 import { calculateStats } from "./stats.js";
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -51,14 +50,6 @@ const elements = {
   catalogList: document.querySelector("#catalog-list"),
   moduleHistory: document.querySelector("#module-history"),
   catalogDialog: document.querySelector("#catalog-dialog"),
-  finishDialog: document.querySelector("#finish-dialog"),
-  finishForm: document.querySelector("#finish-form"),
-  finishAt: document.querySelector("#finish-at"),
-  finishTitle: document.querySelector("#finish-dialog-title"),
-  finishHelp: document.querySelector("#finish-dialog-help"),
-  finishLabel: document.querySelector("#finish-at-label"),
-  finishSubmit: document.querySelector("#finish-submit"),
-  cancelFinish: document.querySelector("#cancel-finish"),
   catalogForm: document.querySelector("#catalog-form"),
   catalogDialogTitle: document.querySelector("#catalog-dialog-title"),
   catalogLabel: document.querySelector("#catalog-label"),
@@ -82,19 +73,16 @@ const MODULES = {
     title: "Rhumato",
     description: "Douleurs et observations rhumatologiques.",
     icon: "🦴",
-    families: ["rhumatologie"],
   },
   digestif: {
     title: "Digestif",
     description: "Symptômes et événements digestifs.",
     icon: "🌿",
-    families: ["digestif"],
   },
   "symptomes-evenements": {
     title: "Symptômes / événements",
     description: "Observations qui ne sont pas propres à un seul autre module.",
     icon: "🌀",
-    families: ["symptomes-evenements", "neurologique", "general", "autre"],
   },
 };
 
@@ -104,9 +92,6 @@ let originalDateTimeFieldValue = null;
 let editingCatalogId = null;
 let catalogFamilyLocked = false;
 let defaultDateTimeFieldValue = null;
-let finishingEntryId = null;
-let correctingEntryEnd = false;
-let addingPastPresence = false;
 
 // Petits utilitaires d'affichage partagés par les vues.
 function createEmptyMessage(text) {
@@ -125,43 +110,12 @@ function formatLocalDateTime(isoDate) {
   }).format(date);
 }
 
-function formatMinimumDuration(milliseconds) {
-  if (!milliseconds) return "";
-  const totalMinutes = Math.floor(milliseconds / 60_000);
-  const days = Math.floor(totalMinutes / 1_440);
-  const hours = Math.floor((totalMinutes % 1_440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts = [];
-  if (days) parts.push(`${days} j`);
-  if (hours) parts.push(`${hours} h`);
-  if (minutes || parts.length === 0) parts.push(`${minutes} min`);
-  return `Durée minimale constatée : au moins ${parts.join(" ")}`;
-}
-
 function toLocalInputValue(isoDate) {
   const date = new Date(isoDate);
   if (Number.isNaN(date.getTime())) return "";
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
     .toISOString()
     .slice(0, 16);
-}
-
-function isItemInModule(item, moduleId) {
-  return MODULES[moduleId]?.families.includes(item.family) || false;
-}
-
-function filteredData(data, moduleId) {
-  const catalog = data.catalog.filter((item) => isItemInModule(item, moduleId));
-  const ids = new Set(catalog.map((item) => item.id));
-  const entries = data.entries.filter((entry) =>
-    (entry.itemIds || []).some((id) => ids.has(id)),
-  );
-  return {
-    ...data,
-    catalog,
-    entries,
-    ...(moduleId !== "digestif" ? { digestive: undefined } : {}),
-  };
 }
 
 // Navigation PWA : l'URL garde le module ouvert, sans recharger la page.
@@ -321,92 +275,6 @@ export function getEntryFormInput() {
 /** Renvoie l'identifiant de l'observation en cours d'édition, s'il y en a une. */
 export function getEditingEntryId() {
   return editingEntry?.id || null;
-}
-
-/** Réutilise une même fenêtre pour ajouter un constat ou enregistrer/corriger une fin. */
-export function openFinishDialog(
-  entry,
-  { edit = false, addPresence = false } = {},
-) {
-  finishingEntryId = entry.id;
-  correctingEntryEnd = edit;
-  addingPastPresence = addPresence;
-  const now = new Date().toISOString();
-  const lastPresence = (entry.stillAt || []).at(-1) || entry.occurredAt;
-  if (addPresence) {
-    elements.finishTitle.textContent =
-      "Quand as-tu constaté que c’était encore présent ?";
-    elements.finishHelp.textContent = entry.endedAt
-      ? "Choisis un moment après le premier repère et avant la fin constatée."
-      : "Choisis un moment passé après le premier repère. Tu peux laisser la fin inconnue.";
-    elements.finishLabel.textContent = "Date et heure du constat";
-    elements.finishSubmit.textContent = "Ajouter ce constat";
-    elements.finishAt.min = toLocalInputValue(
-      new Date(new Date(entry.occurredAt).getTime() + 60_000),
-    );
-    // À la minute près : strictement avant une fin, ou au plus tard maintenant.
-    const latest = entry.endedAt
-      ? Math.min(Date.now(), Date.parse(entry.endedAt) - 1)
-      : Date.now();
-    elements.finishAt.max = toLocalInputValue(new Date(latest));
-    elements.finishAt.value = "";
-  } else {
-    elements.finishTitle.textContent = edit
-      ? "Quand as-tu constaté que c’était terminé ?"
-      : "Quand as-tu constaté que c’était terminé ?";
-    elements.finishHelp.textContent =
-      "L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.";
-    elements.finishLabel.textContent = "Date et heure constatées";
-    elements.finishSubmit.textContent = edit
-      ? "Enregistrer la correction"
-      : "Enregistrer la fin constatée";
-    elements.finishAt.min = toLocalInputValue(lastPresence);
-    elements.finishAt.max = toLocalInputValue(now);
-    elements.finishAt.value = toLocalInputValue(edit ? entry.endedAt : now);
-  }
-  openDialog(elements.finishDialog);
-}
-
-/** Identifie l'observation visée par la fenêtre de constat/fin. */
-export function getFinishingEntryId() {
-  return finishingEntryId;
-}
-
-/** Distingue la correction d'une fin de l'enregistrement d'une nouvelle fin. */
-export function isCorrectingEntryEnd() {
-  return correctingEntryEnd;
-}
-
-/** Indique si la fenêtre doit ajouter un constat passé plutôt qu'une fin. */
-export function isAddingPastPresence() {
-  return addingPastPresence;
-}
-
-/** Valide puis convertit l'heure de la fenêtre en date ISO. */
-export function getFinishTimestamp() {
-  const timestamp = new Date(elements.finishAt.value);
-  if (!elements.finishAt.value || Number.isNaN(timestamp.getTime())) {
-    throw new Error("Choisis une date et une heure valides.");
-  }
-  return timestamp.toISOString();
-}
-
-/** Efface l'état temporaire et les bornes avant la prochaine ouverture. */
-export function closeFinishDialog(options = {}) {
-  if (!closeDialog(elements.finishDialog, options)) return false;
-  finishingEntryId = null;
-  correctingEntryEnd = false;
-  addingPastPresence = false;
-  elements.finishForm.reset();
-  elements.finishAt.removeAttribute("min");
-  elements.finishAt.removeAttribute("max");
-  elements.finishTitle.textContent =
-    "Quand as-tu constaté que c’était terminé ?";
-  elements.finishHelp.textContent =
-    "L’heure actuelle est proposée. Tu peux choisir une heure passée si tu as remarqué la disparition plus tôt.";
-  elements.finishLabel.textContent = "Date et heure constatées";
-  elements.finishSubmit.textContent = "Enregistrer la fin constatée";
-  return true;
 }
 
 /** Réinitialise complètement le formulaire avant une nouvelle saisie. */
@@ -595,8 +463,8 @@ export function showToast(message, type = "info") {
 
 // Rendu sans injection HTML : les données utilisateur sont toujours insérées
 // comme texte pour afficher les notes sans les interpréter comme du balisage.
-function renderStats(data, target) {
-  const stats = calculateStats(data);
+function renderStats(data, target, options = {}) {
+  const stats = calculateStats(data, options);
   target.replaceChildren();
   const cards = [
     ["Observations", String(stats.totalEntries)],
@@ -860,7 +728,7 @@ export function renderAll(
   renderHistory(data, elements.homeHistory, { limit: 5 });
   renderItemChoices(data, moduleId, selectedItemChoices());
   renderBodyMap(data, moduleId, bodyMapState);
-  renderStats(filteredData(data, moduleId), elements.moduleStats);
+  renderStats(data, elements.moduleStats, { moduleId });
   renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
   renderCatalog(data, null);
 }

@@ -276,7 +276,9 @@ try {
   );
   assert.equal(group.length, 2);
   assert.deepEqual(group.find((entry) => entry.id !== reflux.id).values, {});
-  ok("nouvelle remontée immédiate avec hauteur et gêne non renseignées");
+  assert.equal(await page.locator("#episode-dialog").isVisible(), true);
+  await page.locator("#episode-cancel").click();
+  ok("nouvelle remontée horodatée, éditeur commun et fermeture sans perte");
 
   await page.locator("#transit-open-passage").click();
   await page.locator("#transit-note").fill("Brouillon");

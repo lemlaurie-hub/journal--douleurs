@@ -4,7 +4,7 @@ V4 d'une application PWA mobile-first de suivi personnel de santé.
 
 ## État du développement
 
-Le lot 1 de suivi du transit est publié. Le lot 2 (version 4.8.0) est autorisé à la publication par Laurie pour tests sur son téléphone.
+Le lot 1 de suivi du transit est publié. Le lot 2 (version 4.8.0) est autorisé à la publication par l’utilisatrice pour tests sur son téléphone.
 
 - Application mobile utilisable hors ligne, données personnelles locales.
 - Carte corporelle Rhumato et catalogue personnalisable.

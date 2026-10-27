@@ -1,6 +1,6 @@
 # ROADMAP — Journal de suivi santé
 
-Ce document est la feuille de route vivante du projet. Il sert à noter les idées, décisions et priorités sans devoir les implémenter immédiatement. Il doit rester compréhensible par Laurie et par tout assistant reprenant le projet.
+Ce document est la feuille de route vivante du projet. Il sert à noter les idées, décisions et priorités sans devoir les implémenter immédiatement. Il doit rester compréhensible par l’utilisatrice et par tout assistant reprenant le projet.
 
 ## Vision
 
@@ -46,7 +46,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 - [x] Page Symptômes / événements (présentation provisoire).
 - [x] Carte corporelle Rhumato recto-verso avec zones affinées selon l’avant/l’arrière, sélection multiple et retrait direct des zones cochées.
 - [ ] Page Mesures.
-  - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par Laurie, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
+  - [ ] Importer des résultats d’analyses sanguines depuis une photo ou un PDF : extraction sur l’appareil, vérification/correction par l’utilisatrice, puis conservation des valeurs structurées (date, examen, résultat, unité et valeurs de référence) sans garder le document original. Prévoir PDF texte d’abord, puis OCR des scans/photos.
 - [x] Ajout/modification d'un élément du catalogue via une logique métier unique.
 - [x] Modification d'une observation depuis son module, avec le même formulaire et sans toucher les champs inchangés.
 - [x] Suivi d'un épisode : première observation horodatée, constats « Encore maintenant » et antidatés accessibles depuis toute observation (y compris V3), conservation de l'ancien repère quand le début est antidaté, fin facultative avec correction d'une heure passée, durée minimale calculée jusqu'au dernier constat de présence et fin inconnue sans clôture automatique.
@@ -75,7 +75,7 @@ Il n'est **pas nécessaire de créer une page “Neurologique” par principe**.
 
 ## Boîte à idées
 
-Cette section sert à noter rapidement les idées de Laurie sans les transformer automatiquement en fonctionnalités validées.
+Cette section sert à noter rapidement les idées de l’utilisatrice sans les transformer automatiquement en fonctionnalités validées.
 
 - Navigation par pages pour éviter un écran trop chargé.
 - Séparer clairement les domaines (rhumato, digestif, symptômes/événements, mesures).
@@ -83,7 +83,7 @@ Cette section sert à noter rapidement les idées de Laurie sans les transformer
 
 ## Règle de gestion de cette roadmap
 
-Une idée peut être ajoutée ici immédiatement sans modifier l'application. Passer une idée en développement nécessite de terminer la réflexion commune et d’obtenir l’accord explicite de Laurie pour coder. Après développement et tests, présenter le bilan puis attendre une validation distincte pour publier.
+Une idée peut être ajoutée ici immédiatement sans modifier l'application. Passer une idée en développement nécessite de terminer la réflexion commune et d’obtenir l’accord explicite de l’utilisatrice pour coder. Après développement et tests, présenter le bilan puis attendre une validation distincte pour publier.
 
 ## Digestif — reprise du 26 octobre 2026
 
@@ -92,10 +92,10 @@ Voir `docs/CAHIER_DES_CHARGES_DIGESTIF.md` et `docs/BILAN_LOT_1.md`.
 - [x] Lot 1 développé localement : transit, Bristol obligatoire, accidents, conditions et jours sans passage.
 - [x] Sauvegardes format 2 avec lecture des anciennes versions et tests de non-régression.
 - [ ] Contrôle de l'interface dans un navigateur réel, téléphone Android et hors ligne.
-- [x] Illustrations validées par Laurie le 26 octobre 2026.
+- [x] Illustrations validées par l’utilisatrice le 26 octobre 2026.
 - [x] Publication du lot 1 autorisée le 26 octobre 2026 pour tests ; vérifier le déploiement GitHub Pages.
 - [x] Lot 2 développé localement : symptômes configurables, épisodes indépendants et retours d’ergonomie.
-- [x] Publication du lot 2 autorisée séparément par Laurie le 26 octobre 2026 pour tests.
+- [x] Publication du lot 2 autorisée séparément par l’utilisatrice le 26 octobre 2026 pour tests.
 - [ ] Lot 3 : historique commun et constats éditables.
 - [ ] Lot 4 : synthèses et PDF médical.
 - [ ] Lot 5 : étude et réalisation des rappels.
@@ -104,7 +104,7 @@ Voir `docs/CAHIER_DES_CHARGES_DIGESTIF.md` et `docs/BILAN_LOT_1.md`.
 
 - [x] Moteur, sauvegardes et ancien historique couverts par les tests automatisés.
 - [x] Tests réels dans Chromium : fenêtres, formulaires, import V3, réimportation, persistance hors ligne et largeurs 320/390/768 px.
-- [ ] Validation sur le téléphone Android de Laurie après publication autorisée.
+- [ ] Validation sur le téléphone Android de l’utilisatrice après publication autorisée.
 - [ ] Lot 3 : chronologie détaillée entrelaçant chaque constat, observations importantes et filtres.
 - [ ] Lot 4 : statistiques médicales spécialisées et PDF annuel.
 
@@ -120,3 +120,23 @@ Voir `docs/LOT_2_DECISIONS.md` et `docs/BILAN_LOT_2.md`.
 - [ ] Publication et vérification distante, puis test Android réel.
 
 Ces correctifs précèdent les lots 3 et suivants et ne les engagent pas.
+
+## Audit des actions communes — 27 octobre 2026
+
+- [x] Unifier Encore maintenant : même fiche depuis l'accueil et l'historique, dernière intensité réellement connue proposée et modifiable.
+- [x] Ouvrir l'éditeur commun après création horodatée d'occurrence, avec conservation du fait si la fiche est fermée.
+- [x] Auditer puis retirer les branchements temporels legacy inutilisés, préserver les observations et associations V3.
+- [x] Vérifier les valeurs sauvegardées et l'historique : 105 tests, 28 parcours antérieurs et sept matrices / 14 combinaisons de points d'entrée.
+- [ ] Validation de `docs/AUDIT_ACTIONS_COMMUNES_2026_10_27.md` et autorisation distincte de publication 4.8.2.
+- [ ] Publication et contrôle Android réel.
+
+## Audit général consolidé — 27 octobre 2026
+
+Inclut l'audit des actions communes préparé auparavant, sans reprise depuis une version qui le perdrait.
+
+- [x] Frontière transactionnelle unique pour toutes les commandes d'interface, l'import et la migration ciblée.
+- [x] Suppression de `persistAndRender` et de la restauration locale du digestif ; création de zones de carte protégée contre les échecs de sauvegarde.
+- [x] Projection commune de l'historique/statistiques et classement centralisé par module.
+- [x] Régressions V3/V4 et échecs de sauvegarde : 130 tests, 37 parcours navigateur et sept matrices comparatives.
+- [ ] Validation du bilan consolidé `docs/BILAN_AUDIT_GENERAL_2026_10_27.md` et autorisation distincte de publication 4.8.2.
+- [ ] Publication vérifiée puis essai Android réel.

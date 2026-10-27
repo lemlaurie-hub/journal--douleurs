@@ -1,3 +1,4 @@
+import { transactData } from "./transactions.js";
 import { nextDailyRefreshAt } from "./history.js";
 import { renderDailyActions } from "./history-ui.js";
 import { createIndependentEntries } from "./episodes.js";
@@ -15,32 +16,18 @@ import {
   updateCatalogItem,
   ensureDigestivePresets,
 } from "./catalog.js";
-import {
-  addPastPresence,
-  createEntry,
-  deleteEntry,
-  finishEntry,
-  recordStillPresent,
-  updateEntry,
-  updateEntryEnd,
-} from "./entries.js?v=4.8.1";
+import { updateEntry } from "./entries.js?v=4.8.2";
 import { createBackup, mergeBackup } from "./transfer.js";
 import {
   closeCatalogDialog,
-  closeFinishDialog,
   beginEntryEdit,
   getCatalogFormInput,
-  getFinishTimestamp,
-  getFinishingEntryId,
   getEditingCatalogId,
   getEditingEntryId,
   getElements,
   getEntryFormInput,
   isEntryFormDirty,
-  isCorrectingEntryEnd,
-  isAddingPastPresence,
   openCatalogDialog,
-  openFinishDialog,
   renderAll,
   renderBodyMap,
   refreshCatalogBodyMapControls,
@@ -82,18 +69,11 @@ function renderCurrentView() {
   }
 }
 
-function persistAndRender() {
-  saveData(data);
-  renderCurrentView();
-}
-
-/** Transaction commune : une erreur de validation ou de quota ne modifie rien. */
+/** Toutes les commandes publient la copie sauvegardée, puis actualisent les vues.
+ * Le rendu n'est pas une étape de persistance : un échec d'affichage ne doit
+ * jamais annuler en mémoire une écriture qui a déjà réussi sur l'appareil. */
 function transact(action) {
-  const next = structuredClone(data);
-  const result = action(next);
-  saveData(next);
-  for (const key of Object.keys(data)) delete data[key];
-  Object.assign(data, next);
+  const result = transactData(data, action, saveData);
   renderCurrentView();
   return result;
 }
@@ -137,79 +117,24 @@ function handleEntrySubmit(event) {
   }
 }
 
-// Une suppression exige une confirmation explicite et ne vise qu'une entrée.
-function handleDeleteEntry(entryId) {
-  const entryExists = data.entries.some((entry) => entry.id === entryId);
-
-  if (!entryExists) return;
-
-  const confirmed = window.confirm("Supprimer cette observation ?");
-  if (!confirmed) return;
-
-  if (deleteEntry(data, entryId)) {
-    if (getEditingEntryId() === entryId) resetEntryForm();
-    persistAndRender();
-    showToast("Observation supprimée.");
-  }
-}
-
-// Capture le clic « Encore maintenant » ici, puis délègue la chronologie au moteur.
-function handleEpisodeAction(action, entryId) {
-  try {
-    if (action === "still-present") {
-      // Capturer l'heure au clic, avant sauvegarde et rendu.
-      const clickedAt = new Date().toISOString();
-      recordStillPresent(data, entryId, clickedAt);
-    } else {
-      const entry = data.entries.find((row) => row.id === entryId);
-      if (entry) openFinishDialog(entry);
-      return;
-    }
-    persistAndRender();
-    showToast("Nouveau constat enregistré avec l’heure actuelle.");
-  } catch (error) {
-    showToast(error.message, "error");
-  }
-}
-
-function handleFinishSubmit(event) {
-  event.preventDefault();
-
-  try {
-    const entryId = getFinishingEntryId();
-    const endedAt = getFinishTimestamp();
-    const correctingEnd = isCorrectingEntryEnd();
-    const addingPresence = isAddingPastPresence();
-    if (addingPresence) addPastPresence(data, entryId, endedAt);
-    else if (correctingEnd) updateEntryEnd(data, entryId, endedAt);
-    else finishEntry(data, entryId, endedAt);
-    closeFinishDialog({ saved: true });
-    persistAndRender();
-    showToast(
-      addingPresence
-        ? "Constat passé ajouté."
-        : correctingEnd
-          ? "Heure de fin corrigée."
-          : "Fin constatée enregistrée.",
-    );
-  } catch (error) {
-    showToast(error.message, "error");
-  }
-}
-
+// Le suivi temporel, y compris V3, est exclusivement branché sur
+// handleEpisodeCommand / episodes.js. L'édition d'associations d'origine
+// conserve updateEntry : elle ne remplace pas le suivi ciblé d'un épisode.
 function handleBodyMapChoice(label, itemId = "", regionId = "") {
   try {
     let item = itemId
       ? data.catalog.find((candidate) => candidate.id === itemId)
       : null;
     if (!item) {
-      item = createCatalogItem(data, {
-        label,
-        family: "rhumatologie",
-        kind: "zone",
-      });
-      // Seul le catalogue est enregistré ici; l'observation attend Enregistrer.
-      persistAndRender();
+      // Créer une zone de carte est une écriture du catalogue, même avant
+      // l'observation : elle bénéficie de la même transaction que les fiches.
+      item = transact((next) =>
+        createCatalogItem(next, {
+          label,
+          family: "rhumatologie",
+          kind: "zone",
+        }),
+      );
     }
     const checkbox = [
       ...elements.itemChoices.querySelectorAll('input[type="checkbox"]'),
@@ -264,14 +189,12 @@ async function handleImport(event) {
     );
     if (!confirmed) return;
 
-    // La fusion est calculée et validée avant cette unique écriture locale.
-    saveData(result.data);
-    data.schemaVersion = result.data.schemaVersion;
-    data.catalog = result.data.catalog;
-    data.entries = result.data.entries;
-    data.settings = result.data.settings;
-    if (result.data.digestive) data.digestive = result.data.digestive;
-    renderCurrentView();
+    // Le fichier a été lu avant la confirmation. Appliquer l'état fusionné
+    // complet à la copie de transaction conserve aussi les extensions racine.
+    transact((next) => {
+      for (const key of Object.keys(next)) delete next[key];
+      Object.assign(next, result.data);
+    });
     showToast(
       `Import terminé : ${result.entriesAdded} observation(s), ${result.catalogAdded} élément(s), ${result.digestiveAdded} transit(s) ajouté(s).`,
     );
@@ -301,13 +224,11 @@ function registerEvents() {
     .addEventListener("click", () =>
       closeDialog(document.querySelector("#settings-dialog"), { saved: true }),
     );
-  document
-    .querySelector("#settings-create")
-    .addEventListener("click", () =>
-      openCatalogDialog({
-        family: document.querySelector("#settings-family").value,
-      }),
-    );
+  document.querySelector("#settings-create").addEventListener("click", () =>
+    openCatalogDialog({
+      family: document.querySelector("#settings-family").value,
+    }),
+  );
   for (const id of ["home-followup", "today-occurrences"]) {
     document.getElementById(id).addEventListener("click", (event) => {
       const command = event.target.closest("[data-episode-command]");
@@ -400,8 +321,6 @@ function registerEvents() {
     field.addEventListener("change", refreshCatalogBodyMapControls);
   }
   elements.catalogForm.addEventListener("submit", handleCatalogSubmit);
-  elements.finishForm.addEventListener("submit", handleFinishSubmit);
-  elements.cancelFinish.addEventListener("click", closeFinishDialog);
   elements.entryForm.addEventListener("submit", handleEntrySubmit);
   // Met à jour l'explication si l'heure de début est antidatée pendant l'édition.
   elements.occurredAt.addEventListener("input", refreshPreviousObservationHint);
@@ -423,37 +342,6 @@ function registerEvents() {
       handleEpisodeCommand(command);
       return;
     }
-    const addPresenceButton = event.target.closest("[data-add-presence-entry]");
-    if (addPresenceButton) {
-      const entry = data.entries.find(
-        (row) => row.id === addPresenceButton.dataset.addPresenceEntry,
-      );
-      if (entry) openFinishDialog(entry, { addPresence: true });
-      return;
-    }
-    const stillPresentButton = event.target.closest(
-      "[data-still-present-entry]",
-    );
-    if (stillPresentButton) {
-      handleEpisodeAction(
-        "still-present",
-        stillPresentButton.dataset.stillPresentEntry,
-      );
-      return;
-    }
-    const finishButton = event.target.closest("[data-finish-entry]");
-    if (finishButton) {
-      handleEpisodeAction("finish", finishButton.dataset.finishEntry);
-      return;
-    }
-    const correctEndButton = event.target.closest("[data-edit-entry-end]");
-    if (correctEndButton) {
-      const entry = data.entries.find(
-        (row) => row.id === correctEndButton.dataset.editEntryEnd,
-      );
-      if (entry) openFinishDialog(entry, { edit: true });
-      return;
-    }
     const editButton = event.target.closest("[data-edit-entry]");
     if (editButton) {
       const entry = data.entries.find(
@@ -465,8 +353,6 @@ function registerEvents() {
       }
       return;
     }
-    const deleteButton = event.target.closest("[data-delete-entry]");
-    if (deleteButton) handleDeleteEntry(deleteButton.dataset.deleteEntry);
   });
 
   elements.catalogList.addEventListener("click", (event) => {
@@ -521,7 +407,7 @@ if (
 // Les contrôles sont branchés avant le rendu : une erreur liée à l’affichage
 // ne transforme plus tout l’écran d’accueil en page inerte.
 setupEpisodeUi(data, transact, showToast, { openCatalog: openCatalogDialog });
-setupDigestive(data, persistAndRender, showToast);
+setupDigestive(data, transact, showToast);
 setupDialogBars();
 if (hasStorageReadError()) {
   const warning = document.createElement("p");

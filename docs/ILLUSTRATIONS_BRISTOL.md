@@ -4,7 +4,7 @@ Outil intégré image_gen, sept générations distinctes, fond non transparent. 
 
 Référence de contrôle des formes : https://www.england.nhs.uk/wp-content/uploads/2023/07/Bristol-stool-chart-for-carer-web-version.pdf
 
-Contrôle visuel : petits morceaux durs séparés (1), forme allongée bosselée (2), forme allongée fissurée (3), forme allongée lisse (4), morceaux mous aux contours nets (5), fragments pâteux irréguliers (6), liquide sans solide (7). Ces illustrations ne constituent pas une validation clinique indépendante. Présentation validée par Laurie le 26 octobre 2026.
+Contrôle visuel : petits morceaux durs séparés (1), forme allongée bosselée (2), forme allongée fissurée (3), forme allongée lisse (4), morceaux mous aux contours nets (5), fragments pâteux irréguliers (6), liquide sans solide (7). Ces illustrations ne constituent pas une validation clinique indépendante. Présentation validée par l’utilisatrice le 26 octobre 2026.
 
 ## Prompts et fichiers
 

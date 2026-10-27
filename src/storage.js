@@ -1,3 +1,4 @@
+import { transactData } from "./transactions.js";
 import { reclassifyKnownV3Items } from "./catalog.js";
 import { validateDigestive } from "./digestive.js";
 import { normalizeConfig } from "./criteria.js";
@@ -61,14 +62,21 @@ export function loadData() {
 
     // Correction additive et idempotente : les migraines exactes importées de
     // la V3 deviennent des symptômes. Les observations et leurs dates restent intactes.
-    if (reclassifyKnownV3Items(data) > 0) {
+    const migration = structuredClone(data);
+    if (reclassifyKnownV3Items(migration) > 0) {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        // Même frontière que les saisies : pas de catalogue migré uniquement
+        // en mémoire si le quota empêche de l'enregistrer. La source reste lisible.
+        transactData(
+          data,
+          (next) => {
+            reclassifyKnownV3Items(next);
+          },
+          saveData,
+        );
       } catch (error) {
-        // Le contenu migré reste disponible en mémoire; une erreur de quota ne
-        // doit jamais transformer un historique valide en base vide.
         console.warn(
-          "Classement des migraines appliqué en mémoire uniquement.",
+          "Reclassement des migraines différé : sauvegarde impossible.",
           error,
         );
       }

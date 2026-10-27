@@ -17,7 +17,7 @@ import {
 // Une seule fenêtre sert à créer et corriger les passages et les accidents.
 const $ = (selector) => document.querySelector(selector);
 let data;
-let persist;
+let commit;
 let notify;
 let editingId = null;
 let editingConditionId = null;
@@ -44,16 +44,19 @@ function dateInput(value) {
 
 /** Affiche une erreur sans fermer le formulaire ni perdre les choix. */
 function attempt(action) {
-  const before = structuredClone(data);
   const errorField = $("#transit-error");
   errorField.textContent = "";
   try {
     action();
   } catch (error) {
-    // Quota ou lecture impossible : ne pas garder une modification non sauvegardée en mémoire.
-    for (const key of Object.keys(data)) delete data[key];
-    Object.assign(data, before);
-    if ($("#transit-dialog").open) errorField.textContent = error.message;
+    // La transaction n'a pas publié sa copie en cas d'échec : aucune
+    // restauration locale, qui risquerait d'annuler une écriture réussie.
+    const dialog = [...document.querySelectorAll("dialog[open]")].at(-1);
+    const target =
+      dialog?.id === "transit-dialog"
+        ? errorField
+        : dialog?.querySelector(".dialog-error");
+    if (target) target.textContent = error.message;
     notify(error.message, "error");
   }
 }
@@ -189,8 +192,9 @@ function renderConditionManager() {
     row.append(
       button(c.active ? "Désactiver" : "Réactiver", () =>
         attempt(() => {
-          saveCondition(data, { label: c.label, active: !c.active }, c.id);
-          persist();
+          commit((next) =>
+            saveCondition(next, { label: c.label, active: !c.active }, c.id),
+          );
         }),
       ),
     );
@@ -209,9 +213,9 @@ export function renderDigestive() {
   renderConditionManager();
 }
 
-export function setupDigestive(state, persistAndRender, showToast) {
+export function setupDigestive(state, transaction, showToast) {
   data = state;
-  persist = persistAndRender;
+  commit = transaction;
   notify = showToast;
   $("#transit-day").value = localDate();
   $("#transit-day").max = localDate();
@@ -267,8 +271,7 @@ export function setupDigestive(state, persistAndRender, showToast) {
   $("#transit-form").addEventListener("submit", (event) => {
     event.preventDefault();
     attempt(() => {
-      saveTransit(data, readTransit(), editingId);
-      persist();
+      commit((next) => saveTransit(next, readTransit(), editingId));
       closeDialog($("#transit-dialog"), { saved: true });
       notify("Transit enregistré.");
     });
@@ -286,8 +289,7 @@ export function setupDigestive(state, persistAndRender, showToast) {
   $("#transit-day-form").addEventListener("submit", (event) => {
     event.preventDefault();
     attempt(() => {
-      confirmNoPassage(data, $("#transit-day").value);
-      persist();
+      commit((next) => confirmNoPassage(next, $("#transit-day").value));
       closeDialog($("#transit-day-dialog"), { saved: true });
       notify("Absence de passage confirmée pour cette journée.");
     });
@@ -312,15 +314,16 @@ export function setupDigestive(state, persistAndRender, showToast) {
       const existing = getDigestive(data).conditions.find(
         (c) => c.id === editingConditionId,
       );
-      saveCondition(
-        data,
-        {
-          label: $("#transit-condition-label").value,
-          active: existing?.active ?? true,
-        },
-        editingConditionId,
+      commit((next) =>
+        saveCondition(
+          next,
+          {
+            label: $("#transit-condition-label").value,
+            active: existing?.active ?? true,
+          },
+          editingConditionId,
+        ),
       );
-      persist();
       resetCondition();
     });
   });
@@ -338,11 +341,9 @@ export function setupDigestive(state, persistAndRender, showToast) {
       } else if (button.dataset.transitDelete) {
         if (!window.confirm("Supprimer cet enregistrement de transit ?"))
           return;
-        deleteTransit(data, button.dataset.transitDelete);
-        persist();
+        commit((next) => deleteTransit(next, button.dataset.transitDelete));
       } else {
-        clearNoPassage(data, button.dataset.dayClear);
-        persist();
+        commit((next) => clearNoPassage(next, button.dataset.dayClear));
       }
     });
   });

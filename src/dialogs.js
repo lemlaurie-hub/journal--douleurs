@@ -55,7 +55,7 @@ export function setupDialogBars() {
     toolbar.className = "dialog-toolbar";
     const submit = form.querySelector('button[type="submit"]');
     const cancel = form.querySelector(
-      "[data-dialog-cancel],#cancel-edit,#cancel-finish,#transit-close,[data-close-catalog]:not(.icon-button)",
+      "[data-dialog-cancel],#cancel-edit,#transit-close,[data-close-catalog]:not(.icon-button)",
     );
     if (cancel) {
       cancel.hidden = false;

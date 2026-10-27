@@ -5,7 +5,7 @@ import {
   getTodayOccurrenceRows,
 } from "./history.js";
 import { CRITERIA, getEditableConfig } from "./criteria.js";
-import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.1";
+import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.2";
 import { formatSelectionLabel } from "./body-map.js";
 
 function node(tag, text, className = "") {
@@ -249,7 +249,6 @@ export function renderDailyActions(data) {
     );
     const controls = node("div", undefined, "compact-actions");
     const still = episodeAction("↻ Encore maintenant", "still", row.episode);
-    still.dataset.instant = "true";
     controls.append(
       still,
       episodeAction("✓ C’est fini", "finish", row.episode),

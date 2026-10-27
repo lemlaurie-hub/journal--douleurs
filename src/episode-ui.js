@@ -5,6 +5,7 @@ import {
   createIndependentEntries,
   getEpisode,
   getPresenceChecks,
+  getLastKnownIntensity,
   savePresenceCheck,
   deletePresenceCheck,
   finishEpisode,
@@ -152,7 +153,15 @@ function openEpisodeAction(
   $("#episode-fields").hidden = rhumato || mode === "finish";
   $("#episode-preserve-group").hidden = mode !== "edit";
   $("#episode-preserve").checked = true;
-  renderLevels(mode === "edit" ? episode.levels : check?.levels || []);
+  const proposedIntensity =
+    mode === "still"
+      ? getLastKnownIntensity(episode, clickedAt)
+      : { levels: [], values: {} };
+  renderLevels(
+    mode === "edit"
+      ? episode.levels
+      : check?.levels || proposedIntensity.levels,
+  );
   if (!rhumato && mode !== "finish") {
     const fullConfig = getEditableConfig(item, episode);
     state.config =
@@ -175,7 +184,7 @@ function openEpisodeAction(
               ...check.values,
               comment: check.note || check.values?.comment || "",
             }
-          : initialValues(state.config);
+          : proposedIntensity.values;
     renderCriteriaFields($("#episode-fields"), state.config, values, {
       prefix: "episode",
     });
@@ -211,24 +220,14 @@ export function handleEpisodeCommand(button) {
       button.dataset.targetKey,
     );
     const command = button.dataset.episodeCommand;
-    if (command === "still" && button.dataset.instant === "true") {
-      // Le raccourci confirme la présence uniquement : aucune intensité supposée.
-      commit((next) =>
-        savePresenceCheck(next, episode.rawEntryId, episode.targetKey, {
-          occurredAt: clickedAt,
-          values: {},
-          levels: [],
-          note: "",
-        }),
-      );
-      notify("Encore présent : constat enregistré à l’heure du clic.");
-    } else if (command === "occurrence") {
-      commit((next) =>
+    if (command === "occurrence") {
+      // Enregistrer d'abord le fait horodaté : fermer la fiche ne l'annule pas.
+      // Son enrichissement emprunte ensuite exactement l'éditeur historique.
+      const created = commit((next) =>
         addOccurrence(next, episode.rawEntryId, episode.targetKey, clickedAt),
       );
-      notify(
-        "Nouvelle occurrence enregistrée. Tu peux la compléter dans l’historique.",
-      );
+      openEpisodeAction("edit", getEpisode(data, created.id));
+      notify("Occurrence enregistrée. Les détails restent facultatifs.");
     } else if (command === "delete-check") {
       if (window.confirm("Supprimer uniquement ce constat ?"))
         commit((next) =>

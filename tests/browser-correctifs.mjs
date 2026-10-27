@@ -182,7 +182,8 @@ try {
     .locator('#home-followup [data-episode-command="still"]')
     .getAttribute("data-entry-id");
   await page.locator('#home-followup [data-episode-command="still"]').click();
-  assert.equal(await page.locator("#episode-dialog").isVisible(), false);
+  assert.equal(await page.locator("#episode-dialog").isVisible(), true);
+  await page.locator('#episode-form button[type="submit"]').click();
   stored = await db();
   assert.equal(stored.entries.find((e) => e.id === first).checks.length, 1);
   await page.locator('#home-followup [data-episode-command="finish"]').click();
@@ -214,6 +215,8 @@ try {
   assert.equal(await page.locator("#today-occurrences button").count(), 1);
   const before = (await db()).entries.length;
   await page.locator("#today-occurrences button").click();
+  assert.equal(await page.locator("#episode-dialog").isVisible(), true);
+  await page.locator("#episode-cancel").click();
   assert.equal((await db()).entries.length, before + 1);
   assert.equal(await page.locator("#today-occurrences button").count(), 1);
   await page.reload();
@@ -377,6 +380,8 @@ try {
   await context.setOffline(true);
   await page.reload();
   await page.locator("#today-occurrences button").click();
+  assert.equal(await page.locator("#episode-dialog").isVisible(), true);
+  await page.locator("#episode-cancel").click();
   const offlineCount = (await db()).entries.length;
   await page.reload();
   assert.equal((await db()).entries.length, offlineCount);

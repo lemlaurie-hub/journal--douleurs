@@ -1,6 +1,8 @@
 import { normalizeItemLocations } from "./body-map.js";
 
-// Logique métier des observations et du suivi de leurs épisodes.
+// API historique conservée pour la compatibilité et ses tests.
+// L'interface utilise episodes.js pour tout suivi temporel, y compris V3.
+// updateEntry reste utilisé pour corriger les associations de saisie d'origine.
 // occurredAt est le premier repère; stillAt contient les heures où la présence
 // a été constatée; endedAt reste absent tant qu'aucune fin n'a été annoncée.
 

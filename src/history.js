@@ -1,3 +1,4 @@
+import { isItemInModule } from "./catalog.js";
 import {
   getEpisodeViews,
   getPresenceChecks,
@@ -16,13 +17,7 @@ export function getHistoryRows(data, { moduleId = null } = {}) {
         data.catalog.find((candidate) => candidate.id === episode.itemId) ||
         episode.itemSnapshot;
       const family = item?.family || "autre";
-      if (
-        moduleId &&
-        (moduleId === "symptomes-evenements"
-          ? ["rhumatologie", "digestif"].includes(family)
-          : family !== moduleId)
-      )
-        continue;
+      if (!isItemInModule({ family }, moduleId)) continue;
       rows.push({
         kind: "episode",
         id: `${source.id}:${episode.targetKey}`,

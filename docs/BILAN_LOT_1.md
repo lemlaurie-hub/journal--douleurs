@@ -1,6 +1,6 @@
 # Lot 1 — Transit quotidien
 
-Développé le 26 octobre 2026 à partir de `main` (`218b95e7f8bae1e76cf94c22bb74c3dfa42d6325`). **Publication autorisée par Laurie le 26 octobre 2026 pour passage en phase de tests.**
+Développé le 26 octobre 2026 à partir de `main` (`218b95e7f8bae1e76cf94c22bb74c3dfa42d6325`). **Publication autorisée par l’utilisatrice le 26 octobre 2026 pour passage en phase de tests.**
 
 ## Fonctions disponibles dans le code
 
@@ -37,7 +37,7 @@ Une lecture impossible du stockage bloque les écritures et affiche un avertisse
 
 Avant validation finale : ouvrir sur petit écran Android, enregistrer un passage simple et double, agrandir une illustration puis revenir au formulaire, corriger/supprimer, tester les conditions, les jours sans passage, exporter/réimporter, fermer/rouvrir et répéter une saisie hors ligne. Vérifier que les données saisies avant mise à jour sont intactes.
 
-Les illustrations ont été validées par Laurie le 26 octobre 2026.
+Les illustrations ont été validées par l’utilisatrice le 26 octobre 2026.
 
 ## Suite
 

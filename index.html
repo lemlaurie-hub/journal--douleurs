@@ -14,7 +14,7 @@
     <title>Journal de suivi santé</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=4.8.1" />
+    <link rel="stylesheet" href="./styles.css?v=4.8.2" />
   </head>
   <body>
     <!-- En-tête commun aux pages d'accueil et aux modules. -->
@@ -944,47 +944,8 @@
         </div>
       </form>
     </dialog>
-    <dialog id="finish-dialog" class="dialog">
-      <form id="finish-form" class="dialog-card">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Suivi d’épisode</p>
-            <h2 id="finish-dialog-title">
-              Quand as-tu constaté que c’était terminé ?
-            </h2>
-          </div>
-        </div>
-        <p class="field-help" id="finish-dialog-help">
-          L’heure actuelle est proposée. Tu peux choisir une heure passée si tu
-          as remarqué la disparition plus tôt.
-        </p>
-        <label class="field"
-          ><span id="finish-at-label">Date et heure constatées</span
-          ><input
-            id="finish-at"
-            name="finish-at"
-            type="datetime-local"
-            required
-        /></label>
-        <div class="dialog-actions">
-          <button
-            type="button"
-            id="cancel-finish"
-            class="button button-secondary"
-          >
-            Annuler</button
-          ><button
-            type="submit"
-            id="finish-submit"
-            class="button button-primary"
-          >
-            Enregistrer la fin constatée
-          </button>
-        </div>
-      </form>
-    </dialog>
     <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
     <!-- Le point d'entrée relie les interactions à la logique métier. -->
-    <script type="module" src="./src/app.js?v=4.8.1"></script>
+    <script type="module" src="./src/app.js?v=4.8.2"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
-# Lot 2 — décisions validées avec Laurie
+# Lot 2 — décisions validées avec l’utilisatrice
 
-Développement autorisé par « go » après les retours sur le lot 1. Publication autorisée séparément par Laurie le 26 octobre 2026 pour tests sur son téléphone. Base distante vérifiée : `b816fb59f80e9aa668d96808b9a8ee30e984de01`.
+Développement autorisé par « go » après les retours sur le lot 1. Publication autorisée séparément par l’utilisatrice le 26 octobre 2026 pour tests sur son téléphone. Base distante vérifiée : `b816fb59f80e9aa668d96808b9a8ee30e984de01`.
 
 ## Symptômes et bibliothèque
 

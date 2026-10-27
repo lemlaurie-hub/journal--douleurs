@@ -1,6 +1,6 @@
 # Bilan du lot 2 — Journal de suivi santé
 
-**Version 4.8.0 : publication autorisée par Laurie le 26 octobre 2026 pour tests sur son téléphone.** Base de départ : version du lot 1 publiée sur `main`, commit `b816fb59f80e9aa668d96808b9a8ee30e984de01`.
+**Version 4.8.0 : publication autorisée par l’utilisatrice le 26 octobre 2026 pour tests sur son téléphone.** Base de départ : version du lot 1 publiée sur `main`, commit `b816fb59f80e9aa668d96808b9a8ee30e984de01`.
 
 ## Résultat
 
@@ -34,7 +34,7 @@ Les transactions modernes valident puis sauvegardent avant de remplacer les donn
 - Tests sur écrans de 320, 390 et 768 pixels ; saisie et rechargement hors ligne réellement exécutés ; aucune erreur JavaScript dans ces parcours.
 - Syntaxe JavaScript, cohérence des cibles HTML, absence d’identifiants répétés/formulaires imbriqués, intégrité des imports et fichiers précachés, `git diff --check`.
 
-Les essais utilisent exclusivement des données synthétiques dans un stockage de test séparé par origine. Ils ne lisent pas les données du téléphone de Laurie. Le contrôle réel sur son Android reste à faire après publication autorisée.
+Les essais utilisent exclusivement des données synthétiques dans un stockage de test séparé par origine. Ils ne lisent pas les données du téléphone de l’utilisatrice. Le contrôle réel sur son Android reste à faire après publication autorisée.
 
 ## Rejouer les contrôles
 
@@ -44,6 +44,6 @@ Les essais utilisent exclusivement des données synthétiques dans un stockage d
 
 ## Publication et suite
 
-Les ressources et le cache sont préparés pour 4.8.0. Laurie a donné son accord distinct pour publier ce lot et le tester sur son téléphone. La publication utilise un commit cohérent sur la tête distante vérifiée ; contrôler les fichiers distants et la réussite de GitHub Pages avant de lui annoncer la mise en ligne.
+Les ressources et le cache sont préparés pour 4.8.0. l’utilisatrice a donné son accord distinct pour publier ce lot et le tester sur son téléphone. La publication utilise un commit cohérent sur la tête distante vérifiée ; contrôler les fichiers distants et la réussite de GitHub Pages avant de lui annoncer la mise en ligne.
 
 Les rapports PDF, statistiques spécialisées, observations importantes et notifications restent dans leurs lots. L’historique commun actuel regroupe les épisodes ; l’intercalage détaillé de chaque constat appartient au lot 3.

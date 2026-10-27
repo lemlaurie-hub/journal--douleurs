@@ -1,37 +1,40 @@
-import { getEntrySelections, formatSelectionLabel } from "./body-map.js";
-import { getEpisodeViews, getPresenceChecks } from "./episodes.js";
+import { getHistoryRows } from "./history.js";
+import { formatSelectionLabel } from "./body-map.js";
+import { getPresenceChecks } from "./episodes.js";
 import { localDate } from "./digestive.js";
 
 // Moteur statistique commun : les vues affichent ces résultats sans les
 // recalculer séparément, pour garder un seul sens aux compteurs.
 
-/** Calcule les compteurs globaux ou ceux d'un sous-ensemble déjà filtré. */
-export function calculateStats(data) {
+/** Calcule les compteurs globaux ou ceux du module, via la projection commune. */
+export function calculateStats(data, { moduleId = null } = {}) {
   const itemCounts = new Map();
   const days = new Set();
-  for (const event of data.digestive?.events || []) days.add(event.localDate);
-  for (const day of data.digestive?.days || []) days.add(day.date);
-
-  for (const entry of data.entries) {
-    if (entry.occurredAt) {
-      days.add(localDate(entry.occurredAt));
+  const rows = getHistoryRows(data, { moduleId });
+  const sourceIds = new Set();
+  const ongoingIds = new Set();
+  let transitRows = 0;
+  // Même sélection de cibles que l'historique : filtrer seulement la saisie
+  // brute laisserait les constats d'un autre module fausser les compteurs V3.
+  for (const row of rows) {
+    days.add(row.date);
+    const view = row.episode;
+    if (!view) {
+      transitRows++;
+      continue;
     }
-    // Uniquement des journées explicitement documentées, jamais celles entre
-    // deux constats espacés. Les anciennes saisies groupées se dédupliquent.
-    for (const view of getEpisodeViews(entry)) {
-      getPresenceChecks(view).forEach((check) =>
-        days.add(localDate(check.occurredAt)),
-      );
-      if (view.endedAt) days.add(localDate(view.endedAt));
-    }
-
-    // Chaque côté est compté séparément quand l'observation le précise.
-    for (const { itemId, regionId } of getEntrySelections(entry)) {
-      const key = JSON.stringify([itemId, regionId]);
-      const current = itemCounts.get(key) || { itemId, regionId, count: 0 };
-      current.count += 1;
-      itemCounts.set(key, current);
-    }
+    sourceIds.add(view.rawEntryId);
+    getPresenceChecks(view).forEach((check) =>
+      days.add(localDate(check.occurredAt)),
+    );
+    if (view.endedAt) days.add(localDate(view.endedAt));
+    if (view.ongoing && !view.endedAt && !view.closedUnknown)
+      ongoingIds.add(view.rawEntryId);
+    const { itemId, regionId } = view;
+    const key = JSON.stringify([itemId, regionId]);
+    const current = itemCounts.get(key) || { itemId, regionId, count: 0 };
+    current.count++;
+    itemCounts.set(key, current);
   }
 
   const topItems = [...itemCounts.values()]
@@ -54,18 +57,11 @@ export function calculateStats(data) {
     .slice(0, 8);
 
   return {
-    totalEntries:
-      data.entries.length +
-      (data.digestive?.events.length || 0) +
-      (data.digestive?.days.length || 0),
+    totalEntries: sourceIds.size + transitRows,
     activeDays: days.size,
-    // Sans heure de fin, le dossier reste ouvert, même si la dernière
-    // confirmation de présence remonte à plusieurs jours.
-    ongoingEntries: data.entries.filter((entry) =>
-      getEpisodeViews(entry).some(
-        (view) => view.ongoing && !view.endedAt && !view.closedUnknown,
-      ),
-    ).length,
+    // On compte les saisies documentées, pas les lignes de constats. Un épisode
+    // retiré de l'accueil à 48 h reste ouvert ici si sa fin est inconnue.
+    ongoingEntries: ongoingIds.size,
     topItems,
   };
 }

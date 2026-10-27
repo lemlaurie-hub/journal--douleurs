@@ -236,3 +236,13 @@ export function ensureDigestivePresets(data) {
     }
   }
 }
+
+/** Classement commun aux choix de saisie, à l'historique et aux statistiques.
+ * Une famille importée non reconnue reste consultable parmi les événements
+ * transversaux, sans réécriture de son nom ou de ses observations. */
+export function isItemInModule(item, moduleId) {
+  if (!moduleId) return true;
+  if (moduleId === "symptomes-evenements")
+    return !["rhumatologie", "digestif"].includes(item?.family);
+  return item?.family === moduleId;
+}

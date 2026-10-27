@@ -1,6 +1,6 @@
 # Bilan des correctifs ergonomiques et fonctionnels
 
-27 octobre 2026 — **version 4.8.1 testée ; publication autorisée par Laurie le 27 octobre 2026**.
+27 octobre 2026 — **version 4.8.1 testée ; publication autorisée par l’utilisatrice le 27 octobre 2026**.
 
 Base distante vérifiée : `main`, commit `3cec3eb4a721683527ba89dc1b2d9936de0a1260` (lot 2 publié). Les consignes, la roadmap, les bilans des lots 1 et 2 et les dépendances du code ont été relus. Les écarts de la copie locale avec les autres fichiers distants étaient uniquement des fins de fichiers ; ils ont été alignés sur le dépôt avant les vérifications.
 
@@ -88,4 +88,4 @@ Pour rejouer : `npm test`, puis `node tests/browser-lot2.mjs` et `node tests/bro
 - La validation sur le téléphone Android réel reste à faire ; Chromium mobile simulé ne remplace pas cet essai.
 - Les minuteurs peuvent être suspendus par Android lorsque l'application est en arrière-plan ; le retour au premier plan recalcule l'affichage à partir des horodatages réels.
 - Aucune question fonctionnelle bloquante identifiée. Les lots suivants n'ont pas été engagés.
-- **Publication autorisée séparément par Laurie le 27 octobre 2026. Vérifier la tête distante et la réussite de GitHub Pages avant d’annoncer la mise en ligne.**
+- **Publication autorisée séparément par l’utilisatrice le 27 octobre 2026. Vérifier la tête distante et la réussite de GitHub Pages avant d’annoncer la mise en ligne.**

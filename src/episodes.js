@@ -1,6 +1,7 @@
 import { getEntrySelections, normalizeItemLocations } from "./body-map.js";
-import { normalizeLevels } from "./entries.js?v=4.8.1";
+import { normalizeLevels } from "./entries.js?v=4.8.2";
 import {
+  CRITERIA,
   getItemConfig,
   normalizeConfig,
   normalizeValues,
@@ -88,6 +89,25 @@ export function getPresenceChecks(entry) {
 
 export function lastPresence(entry) {
   return getPresenceChecks(entry).at(-1)?.occurredAt || entry.occurredAt;
+}
+
+/** Valeurs proposées pour un NOUVEAU constat, sans modifier le passé.
+ * Chaque intensité remonte à son dernier renseignement, même si les constats
+ * suivants sont vides. Zéro est connu ; commentaires/localisations ne sont pas
+ * recopiés. La borne évite de proposer une mesure postérieure au constat. */
+export function getLastKnownIntensity(episode, at = new Date().toISOString()) {
+  const result = { levels: [], values: {} };
+  const observations = [episode, ...getPresenceChecks(episode)]
+    .filter((row) => Date.parse(row.occurredAt) <= Date.parse(at))
+    .sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+  for (const observation of observations) {
+    if (observation.levels?.length) result.levels = [...observation.levels];
+    for (const [key, value] of Object.entries(observation.values || {})) {
+      if (CRITERIA[key]?.type === "scale" && value != null)
+        result.values[key] = value;
+    }
+  }
+  return result;
 }
 
 function valuesFor(input, defaults = {}) {
