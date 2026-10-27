@@ -109,3 +109,14 @@ Voir `docs/CAHIER_DES_CHARGES_DIGESTIF.md` et `docs/BILAN_LOT_1.md`.
 - [ ] Lot 4 : statistiques médicales spécialisées et PDF annuel.
 
 Voir `docs/LOT_2_DECISIONS.md` et `docs/BILAN_LOT_2.md`.
+
+## Correctifs avant les lots suivants — 27 octobre 2026
+
+- [x] Développement : Digestif compact, paramètres centralisés, prédéfinis configurables sans saisie, réglettes numériques communes.
+- [x] Suivi sur l'accueil pendant 48 h, constat direct, fin inconnue ou réelle explicite ; occurrences rapides du jour.
+- [x] Préservation de l'historique et tests de régression : 96 tests et 28 parcours Chromium.
+- [x] Préparation des ressources/cache 4.8.1 et bilan `docs/BILAN_CORRECTIFS_2026_10_27.md`.
+- [x] Validation du bilan et autorisation distincte de publication le 27 octobre 2026.
+- [ ] Publication et vérification distante, puis test Android réel.
+
+Ces correctifs précèdent les lots 3 et suivants et ne les engagent pas.

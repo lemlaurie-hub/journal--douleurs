@@ -1,5 +1,5 @@
 import { normalizeBodyMap } from "./body-map.js";
-import { normalizeConfig } from "./criteria.js";
+import { DIGESTIVE_PRESETS, normalizeConfig } from "./criteria.js";
 
 // Gestion centralisée du catalogue d'éléments de suivi.
 // Une seule fonction crée un élément, quel que soit l'écran qui l'appelle.
@@ -70,6 +70,7 @@ export function createCatalogItem(data, input) {
     createdAt: new Date().toISOString(),
   };
 
+  if (input.presetKey) item.presetKey = input.presetKey;
   if (bodyMap) item.bodyMap = bodyMap;
   if (config) item.config = config;
   data.catalog.push(item);
@@ -188,4 +189,50 @@ export function getKindLabel(kind) {
   };
 
   return labels[kind] || "Élément";
+}
+
+/** Catalogue et propositions utilisent une identité stable après renommage.
+ * Les propositions ne créent aucune observation et ne réécrivent pas le passé. */
+export function getDigestiveSymptomChoices(data) {
+  const existing = data.catalog.filter(
+    (item) => item.family === "digestif" && item.kind !== "zone",
+  );
+  const missing = DIGESTIVE_PRESETS.filter(
+    (preset) =>
+      !data.catalog.some(
+        (item) =>
+          item.presetKey === preset.key ||
+          (item.family === "digestif" &&
+            item.label.toLocaleLowerCase("fr") ===
+              preset.label.toLocaleLowerCase("fr")),
+      ),
+  );
+  return [
+    ...existing,
+    ...missing.map((preset) => ({
+      id: `preset:${preset.key}`,
+      presetKey: preset.key,
+      label: preset.label,
+      family: "digestif",
+      kind: "symptome",
+      config: { version: 1, criteria: [...preset.criteria] },
+    })),
+  ];
+}
+
+/** Rend les propositions configurables avec le moteur ordinaire du catalogue. */
+export function ensureDigestivePresets(data) {
+  for (const choice of getDigestiveSymptomChoices(data)) {
+    if (choice.id.startsWith("preset:")) {
+      const { id, ...input } = choice;
+      createCatalogItem(data, input);
+    } else if (!choice.presetKey) {
+      const preset = DIGESTIVE_PRESETS.find(
+        (p) =>
+          p.label.toLocaleLowerCase("fr") ===
+          choice.label.toLocaleLowerCase("fr"),
+      );
+      if (preset) choice.presetKey = preset.key;
+    }
+  }
 }

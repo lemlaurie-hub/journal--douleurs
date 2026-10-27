@@ -18,43 +18,34 @@ export function renderCriteriaFields(
     const control = document.createElement(
       definition.type === "textarea"
         ? "textarea"
-        : ["choice", "number"].includes(definition.type)
+        : definition.type === "choice"
           ? "select"
           : "input",
     );
+    let clear = null;
     control.dataset.criterion = key;
     control.id = `${prefix}-${key}`;
-    if (definition.type === "choice" || definition.type === "number") {
+    if (definition.type === "choice") {
       control.add(new Option("Non renseigné", ""));
       const choices =
         definition.choices || Array.from({ length: 11 }, (_, i) => i);
       choices.forEach((value) =>
         control.add(new Option(String(value), String(value))),
       );
-    } else if (definition.type === "pain") {
-      control.type = "range";
-      control.min = "0";
-      control.max = "10";
-      control.step = "1";
-      // Une ancienne absence de mesure reste inconnue jusqu'à interaction.
-      control.dataset.unanswered = String(
-        values[key] === undefined || values[key] === null,
-      );
+    } else if (definition.type === "scale") {
       const output = document.createElement("output");
       output.htmlFor = control.id;
-      const refresh = () => {
-        output.textContent =
-          control.dataset.unanswered === "true"
-            ? " — Non renseigné"
-            : ` — ${control.value} / 10`;
-      };
-      control.addEventListener("input", () => {
-        control.dataset.unanswered = "false";
-        refresh();
-      });
+      bindNumericRange(control, output, values[key]);
       title.append(output);
-      control.value = values[key] ?? 0;
-      refresh();
+      clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "button button-secondary button-small";
+      clear.textContent = "Non renseigné";
+      clear.disabled = preview;
+      clear.addEventListener("click", () => {
+        control.dataset.unanswered = "true";
+        output.textContent = " — Non renseigné";
+      });
     } else if (definition.type === "text") {
       control.type = "text";
       control.placeholder =
@@ -62,9 +53,10 @@ export function renderCriteriaFields(
           ? "Estomac, intestins, œsophage, gorge, abdomen…"
           : "";
     }
-    if (definition.type !== "pain") control.value = values[key] ?? "";
+    if (definition.type !== "scale") control.value = values[key] ?? "";
     if (preview) control.disabled = true;
     label.append(title, control);
+    if (clear) label.append(clear);
     target.append(label);
   }
 }
@@ -76,9 +68,8 @@ export function readCriteriaFields(target) {
     if (control.dataset.unanswered === "true" || control.value === "")
       values[key] = null;
     else
-      values[key] = ["pain", "discomfort"].includes(key)
-        ? Number(control.value)
-        : control.value;
+      values[key] =
+        CRITERIA[key]?.type === "scale" ? Number(control.value) : control.value;
   });
   return values;
 }
@@ -107,4 +98,41 @@ export function readConfigChoices(target) {
       (input) => input.value,
     ),
   });
+}
+
+/** Contrôle commun à toutes les échelles numériques, y compris le transit.
+ * L'absence historique reste inconnue ; toucher zéro exprime bien zéro. */
+export function bindNumericRange(control, output, value) {
+  control.type = "range";
+  control.min = "0";
+  control.max = "10";
+  control.step = "1";
+  control.value = value ?? 0;
+  control.dataset.unanswered = String(value == null);
+  const refresh = () => {
+    output.textContent =
+      control.dataset.unanswered === "true"
+        ? " — Non renseigné"
+        : ` — ${control.value} / 10`;
+  };
+  control.oninput = control.onpointerup = () => {
+    control.dataset.unanswered = "false";
+    refresh();
+  };
+  control.onkeyup = (event) => {
+    if (
+      [
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+        "Home",
+        "End",
+        "PageUp",
+        "PageDown",
+      ].includes(event.key)
+    )
+      control.oninput();
+  };
+  refresh();
 }

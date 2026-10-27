@@ -1,3 +1,5 @@
+import { nextDailyRefreshAt } from "./history.js";
+import { renderDailyActions } from "./history-ui.js";
 import { createIndependentEntries } from "./episodes.js";
 import { setupEpisodeUi, handleEpisodeCommand } from "./episode-ui.js";
 import { setupDialogBars, openDialog, closeDialog } from "./dialogs.js";
@@ -8,7 +10,11 @@ import {
   hasStorageReadError,
   getStorageKey,
 } from "./storage.js";
-import { createCatalogItem, updateCatalogItem } from "./catalog.js";
+import {
+  createCatalogItem,
+  updateCatalogItem,
+  ensureDigestivePresets,
+} from "./catalog.js";
 import {
   addPastPresence,
   createEntry,
@@ -17,7 +23,7 @@ import {
   recordStillPresent,
   updateEntry,
   updateEntryEnd,
-} from "./entries.js?v=4.8.0";
+} from "./entries.js?v=4.8.1";
 import { createBackup, mergeBackup } from "./transfer.js";
 import {
   closeCatalogDialog,
@@ -55,6 +61,7 @@ import {
 const data = loadData();
 const elements = getElements();
 let currentModule = "rhumatologie";
+let dailyRefreshTimer;
 const bodyMapState = { view: "front", region: null, showAllChoices: false };
 
 // Rendu et persistance communs à tous les modules.
@@ -62,6 +69,8 @@ function renderCurrentView() {
   try {
     renderAll(data, currentModule, bodyMapState);
     renderDigestive();
+    renderDailyActions(data);
+    scheduleDailyRefresh();
   } catch (error) {
     // Une erreur de rendu ne doit pas laisser tous les boutons sans action.
     // Les données restent en mémoire et dans le stockage local.
@@ -278,6 +287,34 @@ async function handleImport(event) {
 
 // Branche les événements une seule fois, même si l'interface est re-rendue.
 function registerEvents() {
+  document.querySelector("#open-settings").addEventListener("click", () => {
+    try {
+      // Catalogue commun : les prédéfinis deviennent configurables sans saisie.
+      transact(ensureDigestivePresets);
+      openDialog(document.querySelector("#settings-dialog"));
+    } catch (error) {
+      showToast(error.message, "error");
+    }
+  });
+  document
+    .querySelector("#close-settings")
+    .addEventListener("click", () =>
+      closeDialog(document.querySelector("#settings-dialog"), { saved: true }),
+    );
+  document
+    .querySelector("#settings-create")
+    .addEventListener("click", () =>
+      openCatalogDialog({
+        family: document.querySelector("#settings-family").value,
+      }),
+    );
+  for (const id of ["home-followup", "today-occurrences"]) {
+    document.getElementById(id).addEventListener("click", (event) => {
+      const command = event.target.closest("[data-episode-command]");
+      if (command) handleEpisodeCommand(command);
+    });
+  }
+
   document.querySelectorAll("[data-open-module]").forEach((button) => {
     button.addEventListener("click", () => {
       currentModule = button.dataset.openModule;
@@ -505,3 +542,23 @@ if (currentModule !== "rhumatologie") {
   }
 }
 renderCurrentView();
+
+// Mise à jour des seuls raccourcis : expiration pendant une session ouverte,
+// changement de date et retour après veille, sans toucher un formulaire actif.
+function refreshDailyActions() {
+  renderDailyActions(data);
+  renderDigestive();
+  scheduleDailyRefresh();
+}
+function scheduleDailyRefresh() {
+  window.clearTimeout(dailyRefreshTimer);
+  dailyRefreshTimer = window.setTimeout(
+    refreshDailyActions,
+    Math.max(1, nextDailyRefreshAt(data) - Date.now() + 5),
+  );
+}
+
+window.addEventListener("focus", refreshDailyActions);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshDailyActions();
+});

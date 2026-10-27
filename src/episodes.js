@@ -1,5 +1,5 @@
 import { getEntrySelections, normalizeItemLocations } from "./body-map.js";
-import { normalizeLevels } from "./entries.js?v=4.8.0";
+import { normalizeLevels } from "./entries.js?v=4.8.1";
 import {
   getItemConfig,
   normalizeConfig,
@@ -86,7 +86,7 @@ export function getPresenceChecks(entry) {
     );
 }
 
-function lastPresence(entry) {
+export function lastPresence(entry) {
   return getPresenceChecks(entry).at(-1)?.occurredAt || entry.occurredAt;
 }
 
@@ -284,6 +284,22 @@ export function deletePresenceCheck(data, entryId, key, checkId) {
 
 export function finishEpisode(data, entryId, key, endedAt) {
   const entry = getEpisode(data, entryId, key);
+  if (endedAt == null) {
+    if (entry.endedAt)
+      throw new Error(
+        "Une heure réelle de fin est déjà renseignée ; elle peut être corrigée.",
+      );
+    patchTarget(data, entryId, entry.targetKey, {
+      closedUnknown: true,
+      ongoing: true,
+      closure: {
+        ...entry.closure,
+        recordedAt: new Date().toISOString(),
+        reason: entry.closure?.reason || "manual",
+      },
+    });
+    return;
+  }
   const end = timestamp(endedAt);
   if (Date.parse(end) < Date.parse(lastPresence(entry)))
     throw new Error(

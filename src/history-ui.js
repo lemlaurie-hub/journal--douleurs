@@ -1,6 +1,11 @@
-import { getHistoryRows, getEpisodeCheckRows } from "./history.js";
+import {
+  getHistoryRows,
+  getEpisodeCheckRows,
+  getFollowupRows,
+  getTodayOccurrenceRows,
+} from "./history.js";
 import { CRITERIA, getEditableConfig } from "./criteria.js";
-import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.0";
+import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.1";
 import { formatSelectionLabel } from "./body-map.js";
 
 function node(tag, text, className = "") {
@@ -17,7 +22,7 @@ function dateLabel(value) {
   }).format(new Date(value));
 }
 
-function action(text, command, episode, check = null) {
+export function episodeAction(text, command, episode, check = null) {
   const button = node("button", text, "button button-secondary button-small");
   button.type = "button";
   button.dataset.episodeCommand = command;
@@ -40,7 +45,7 @@ export function renderValues(target, values, note = "") {
     target.append(
       node(
         "p",
-        `${CRITERIA[key]?.label || key} : ${value}${["pain", "discomfort"].includes(key) ? " / 10" : ""}`,
+        `${CRITERIA[key]?.label || key} : ${value}${CRITERIA[key]?.type === "scale" ? " / 10" : ""}`,
       ),
     );
   }
@@ -86,8 +91,13 @@ export function renderUnifiedHistory(
         renderValues(detail, check.values, check.note);
         if (actions) {
           detail.append(
-            action("Modifier le constat", "edit-check", episode, check),
-            action("Supprimer le constat", "delete-check", episode, check),
+            episodeAction("Modifier le constat", "edit-check", episode, check),
+            episodeAction(
+              "Supprimer le constat",
+              "delete-check",
+              episode,
+              check,
+            ),
           );
         }
         article.append(detail);
@@ -123,12 +133,14 @@ export function renderUnifiedHistory(
           : null;
         const temporal = !criteria || criteria.includes("stillPresent");
         if (temporal && !episode.endedAt && !episode.closedUnknown)
-          controls.append(action("Encore maintenant", "still", episode));
+          controls.append(episodeAction("Encore maintenant", "still", episode));
         if (temporal)
-          controls.append(action("Ajouter un constat passé", "past", episode));
+          controls.append(
+            episodeAction("Ajouter un constat passé", "past", episode),
+          );
         if (!criteria || criteria.includes("finish"))
           controls.append(
-            action(
+            episodeAction(
               episode.closedUnknown
                 ? "Préciser la fin"
                 : episode.endedAt
@@ -140,9 +152,9 @@ export function renderUnifiedHistory(
           );
         if (criteria?.includes("newOccurrence"))
           controls.append(
-            action("+ Une nouvelle occurrence", "occurrence", episode),
+            episodeAction("+ Une nouvelle occurrence", "occurrence", episode),
           );
-        controls.append(action("Modifier", "edit", episode));
+        controls.append(episodeAction("Modifier", "edit", episode));
         // L'édition d'origine conserve notamment la correction des associations V3.
         if (
           data.entries.find((entry) => entry.id === episode.rawEntryId)
@@ -158,7 +170,11 @@ export function renderUnifiedHistory(
           original.dataset.editEntry = episode.rawEntryId;
           controls.append(original);
         }
-        const remove = action("Supprimer cet épisode", "delete", episode);
+        const remove = episodeAction(
+          "Supprimer cet épisode",
+          "delete",
+          episode,
+        );
         controls.append(remove);
         article.append(controls);
       }
@@ -212,5 +228,44 @@ export function renderUnifiedHistory(
       article.append(cancel);
     }
     target.append(article);
+  }
+}
+
+/** Raccourcis des pages quotidiennes : mêmes identifiants et commandes que
+ * l'historique, sans second moteur de suivi ni sauvegarde séparée. */
+export function renderDailyActions(data) {
+  const target = document.querySelector("#home-followup");
+  target.replaceChildren();
+  const rows = getFollowupRows(data);
+  if (!rows.length)
+    target.append(node("p", "Aucun événement récent à suivre.", "field-help"));
+  for (const row of rows) {
+    const article = node("article", undefined, "history-entry");
+    article.append(
+      node(
+        "strong",
+        formatSelectionLabel({ label: row.label }, row.episode.regionId),
+      ),
+    );
+    const controls = node("div", undefined, "compact-actions");
+    const still = episodeAction("↻ Encore maintenant", "still", row.episode);
+    still.dataset.instant = "true";
+    controls.append(
+      still,
+      episodeAction("✓ C’est fini", "finish", row.episode),
+    );
+    article.append(controls);
+    target.append(article);
+  }
+  const occurrences = document.querySelector("#today-occurrences");
+  occurrences.replaceChildren();
+  for (const row of getTodayOccurrenceRows(data)) {
+    occurrences.append(
+      episodeAction(
+        `+ Nouvelle occurrence — ${row.label}`,
+        "occurrence",
+        row.episode,
+      ),
+    );
   }
 }

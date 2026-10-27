@@ -66,7 +66,14 @@ function ok(label) {
 }
 try {
   await page.goto(base);
-  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.evaluate(() =>
+    Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Service worker non prêt")), 10000),
+      ),
+    ]),
+  );
   await page.reload();
   await page.locator('[data-open-module="digestif"]').click();
   assert.equal(
@@ -123,7 +130,9 @@ try {
   await page.locator("#transit-open-none").click();
   await page.locator("#transit-day").fill("2026-01-01");
   await page.locator('#transit-day-form button[type="submit"]').click();
-  await page.locator("#transit-open-history").click();
+  await page.locator("#module-history").evaluate((el) => {
+    el.closest("details").open = true;
+  });
   await page.locator("#module-history [data-day-clear]").click();
   assert.equal((await db()).digestive.days.length, 0);
   ok("accueil commun et confirmation de journée annulable dans l’historique");
@@ -167,7 +176,9 @@ try {
   const old = stored.entries.find((entry) => entry.itemIds.includes(custom.id));
   assert.equal(old.values.pain, 0);
   ok("création personnalisée, aperçu partagé et douleur zéro par défaut");
-  await page.locator("#transit-open-history").click();
+  await page.locator("#module-history").evaluate((el) => {
+    el.closest("details").open = true;
+  });
 
   await page
     .locator(
@@ -215,12 +226,13 @@ try {
   );
   ok("clôture inconnue définitive après suppression du nouvel épisode");
 
-  await page.locator("#catalog-title").click();
+  await page.locator("#open-settings").click();
   await page.locator(`[data-edit-catalog="${custom.id}"]`).click();
   await page.locator("#catalog-label").fill("Crampe renommée");
   await page.locator('#catalog-criteria input[value="pain"]').uncheck();
   await page.locator('#catalog-criteria input[value="discomfort"]').check();
   await page.locator("#save-catalog-item").click();
+  await page.locator("#close-settings").click();
   await page
     .locator(
       `#module-history [data-episode-command="edit"][data-entry-id="${old.id}"]`,
@@ -233,8 +245,8 @@ try {
   assert.equal(
     await page
       .locator('#episode-fields [data-criterion="discomfort"]')
-      .inputValue(),
-    "",
+      .getAttribute("data-unanswered"),
+    "true",
   );
   await page.locator("#episode-cancel").click();
   ok(
@@ -242,7 +254,9 @@ try {
   );
 
   await page.locator("#transit-open-symptom").click();
-  await page.locator("#episode-symptom").selectOption("preset:reflux");
+  await page
+    .locator("#episode-symptom")
+    .selectOption({ label: "Remontée acide" });
   await chooseDate("2026-01-04T10:00");
   await page
     .locator('#episode-fields [data-criterion="refluxHeight"]')
@@ -276,6 +290,9 @@ try {
 
   await page.locator("[data-go-home]").click();
   await page.locator('[data-open-module="rhumatologie"]').click();
+  await page.locator("#module-history").evaluate((el) => {
+    el.closest("details").open = true;
+  });
   await page.locator("#open-entry-dialog").click();
   await page.locator('[data-body-region="hand-right"]').click();
   await page.locator("[data-body-map-choice]").first().click();
@@ -333,6 +350,9 @@ try {
     entry.id.startsWith("entry-v3-"),
   );
   await page.locator('[data-open-module="rhumatologie"]').click();
+  await page.locator("#module-history").evaluate((el) => {
+    el.closest("details").open = true;
+  });
   const legacyButton = page
     .locator(
       `#module-history [data-episode-command="still"][data-entry-id="${legacy.id}"]`,
@@ -378,6 +398,7 @@ try {
   );
 
   await page.locator('[data-open-module="digestif"]').click();
+  await page.locator("#open-settings").click();
   await page.locator("#transit-open-conditions").click();
   await page.locator("#transit-condition-label").fill("Condition test");
   await page.locator("#transit-condition-save").click();
@@ -387,6 +408,7 @@ try {
     ),
   );
   await page.locator("#transit-conditions-close").click();
+  await page.locator("#close-settings").click();
   ok("gestion des conditions dans une fenêtre avec sa barre d’actions");
   for (const width of [320, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });

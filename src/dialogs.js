@@ -47,7 +47,7 @@ export function setupDialogBars() {
   document.querySelectorAll("dialog").forEach((dialog) => {
     dialog.addEventListener("cancel", (event) => {
       event.preventDefault();
-      closeDialog(dialog);
+      closeDialog(dialog, { saved: !dialog.querySelector("form") });
     });
     const form = dialog.querySelector("form");
     if (!form || form.querySelector(".dialog-toolbar")) return;

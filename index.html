@@ -14,7 +14,7 @@
     <title>Journal de suivi santé</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=4.8.0" />
+    <link rel="stylesheet" href="./styles.css?v=4.8.1" />
   </head>
   <body>
     <!-- En-tête commun aux pages d'accueil et aux modules. -->
@@ -26,6 +26,15 @@
           Les observations restent enregistrées sur cet appareil.
         </p>
       </div>
+      <button
+        id="open-settings"
+        class="button button-secondary settings-gear"
+        type="button"
+        aria-label="Paramètres"
+        title="Paramètres"
+      >
+        ⚙
+      </button>
     </header>
 
     <main class="app-shell">
@@ -78,6 +87,10 @@
           </nav>
         </section>
 
+        <section class="panel" aria-labelledby="followup-title">
+          <h2 id="followup-title">Événements à suivre</h2>
+          <div id="home-followup" class="history-list"></div>
+        </section>
         <section class="panel" aria-labelledby="home-stats-title">
           <div class="section-heading">
             <div>
@@ -163,14 +176,14 @@
                 class="button button-primary"
                 type="button"
               >
-                + Ajouter un passage
+                + Ajouter
               </button>
               <button
                 id="transit-open-none"
                 class="button button-secondary"
                 type="button"
               >
-                Aucun passage ce jour
+                ⊘ Aucun
               </button>
             </section>
             <button
@@ -185,27 +198,10 @@
               class="button button-secondary"
               type="button"
             >
-              Symptôme digestif
-            </button>
-            <button
-              id="transit-open-history"
-              class="button button-secondary consultation-button"
-              type="button"
-            >
-              Consulter l’historique et les rapports →
+              + Symptôme
             </button>
           </div>
-          <p class="field-help">
-            Les rapports médicaux arriveront dans un prochain lot.
-          </p>
-
-          <button
-            id="transit-open-conditions"
-            type="button"
-            class="button button-secondary"
-          >
-            Personnaliser les conditions
-          </button>
+          <div id="today-occurrences" class="compact-actions"></div>
         </section>
 
         <div id="module-entry-actions" class="form-actions">
@@ -216,24 +212,12 @@
           >
             Ajouter une observation
           </button>
-          <button
-            type="button"
-            class="button button-secondary"
-            data-open-catalog
-          >
-            Créer une zone ou un symptôme
-          </button>
         </div>
 
-        <section class="panel" aria-labelledby="module-stats-title">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Vue d'ensemble</p>
-              <h2 id="module-stats-title">Statistiques du module</h2>
-            </div>
-          </div>
+        <details id="module-statistics" class="panel collapsible-panel">
+          <summary><h2 id="module-stats-title">Statistiques</h2></summary>
           <div id="module-stats" class="stats-grid"></div>
-        </section>
+        </details>
 
         <details
           class="panel collapsible-panel"
@@ -242,22 +226,55 @@
           <summary><h2 id="history-title">Historique</h2></summary>
           <div id="module-history" class="history-list"></div>
         </details>
-
-        <details
-          class="panel collapsible-panel"
-          aria-labelledby="catalog-title"
-        >
-          <summary><h2 id="catalog-title">Zones enregistrées</h2></summary>
-          <p class="field-help">
-            Modifier la catégorie d’un élément déplace toutes ses observations
-            associées. Pour corriger une seule observation, utilise le bouton «
-            Modifier » dans son historique.
-          </p>
-          <div id="catalog-list" class="catalog-list"></div>
-        </details>
       </section>
     </main>
 
+    <dialog id="settings-dialog" class="dialog">
+      <section class="dialog-card">
+        <div class="dialog-toolbar">
+          <h2>Paramètres</h2>
+          <button
+            id="close-settings"
+            type="button"
+            class="button button-secondary"
+          >
+            ✕ Fermer
+          </button>
+        </div>
+        <h3 id="catalog-title">Symptômes, événements et zones</h3>
+        <p class="field-help">
+          Modifier un libellé ou des critères conserve les observations
+          historiques et leurs valeurs.
+        </p>
+        <div class="compact-actions">
+          <label class="field"
+            ><span>Module de création</span
+            ><select id="settings-family">
+              <option value="digestif">Digestif</option>
+              <option value="rhumatologie">Rhumato</option>
+              <option value="symptomes-evenements">
+                Symptômes / événements
+              </option>
+            </select></label
+          >
+          <button
+            id="settings-create"
+            type="button"
+            class="button button-primary"
+          >
+            + Créer un élément
+          </button>
+          <button
+            id="transit-open-conditions"
+            type="button"
+            class="button button-secondary"
+          >
+            ⚙ Conditions digestives
+          </button>
+        </div>
+        <div id="catalog-list" class="catalog-list"></div>
+      </section>
+    </dialog>
     <dialog id="transit-day-dialog" class="dialog">
       <form id="transit-day-form" class="dialog-card">
         <fieldset>
@@ -273,7 +290,7 @@
               type="submit"
               class="button button-secondary"
             >
-              Aucun passage ce jour
+              ⊘ Aucun
             </button>
             <button
               id="transit-day-cancel"
@@ -345,8 +362,13 @@
             Créer un symptôme ou événement
           </button>
         </div>
+        <label id="episode-end-unknown-group" class="checkbox-field" hidden
+          ><input id="episode-end-unknown" type="checkbox" /><span
+            >Heure réelle de fin inconnue</span
+          ></label
+        >
         <label class="field"
-          ><span>Date et heure</span
+          ><span id="episode-at-label">Date et heure</span
           ><input id="episode-at" type="datetime-local" required
         /></label>
         <fieldset id="episode-levels-group" hidden>
@@ -963,6 +985,6 @@
     </dialog>
     <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
     <!-- Le point d'entrée relie les interactions à la logique métier. -->
-    <script type="module" src="./src/app.js?v=4.8.0"></script>
+    <script type="module" src="./src/app.js?v=4.8.1"></script>
   </body>
 </html>

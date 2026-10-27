@@ -2,10 +2,10 @@
 // pas un formulaire particulier. Les valeurs absentes restent absentes.
 export const CRITERIA = {
   location: { label: "Localisation", type: "text" },
-  pain: { label: "Intensité de la douleur", type: "pain", min: 0, max: 10 },
+  pain: { label: "Intensité de la douleur", type: "scale", min: 0, max: 10 },
   discomfort: {
     label: "Intensité de la gêne",
-    type: "number",
+    type: "scale",
     min: 0,
     max: 10,
   },
@@ -105,7 +105,7 @@ export function normalizeValues(values = {}) {
     if (!definition || definition.type === "action")
       throw new Error("Critère inconnu dans l’observation.");
     if (value === null || value === undefined || value === "") continue;
-    if (["pain", "number"].includes(definition.type)) {
+    if (definition.type === "scale") {
       if (
         !Number.isInteger(value) ||
         value < definition.min ||

@@ -14,7 +14,7 @@ import {
   getEntrySelections,
   formatSelectionLabel,
 } from "./body-map.js";
-import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.0";
+import { formatLevelRange, getMinimumDurationMs } from "./entries.js?v=4.8.1";
 import { calculateStats } from "./stats.js";
 
 // Cette couche ne contient pas de règles métier : elle prépare les champs et
@@ -191,6 +191,10 @@ export function setActivePage(page, moduleId = null) {
     return;
   }
 
+  // Une visite repart repliée ; un rendu après saisie conserve le contexte.
+  document
+    .querySelectorAll("#module-page details")
+    .forEach((section) => (section.open = false));
   document.querySelector("#digestive-panel").hidden = moduleId !== "digestif";
   document.querySelector("#module-entry-actions").hidden =
     moduleId === "digestif";
@@ -643,7 +647,7 @@ function renderHistory(data, target, options = {}) {
 function renderCatalog(data, moduleId) {
   elements.catalogList.replaceChildren();
   const items = data.catalog
-    .filter((item) => isItemInModule(item, moduleId))
+    .filter((item) => !moduleId || isItemInModule(item, moduleId))
     .sort((a, b) => a.label.localeCompare(b.label, "fr"));
   if (items.length === 0) {
     elements.catalogList.append(
@@ -845,12 +849,6 @@ export function renderAll(
   moduleId,
   bodyMapState = { view: "front", region: null, showAllChoices: false },
 ) {
-  document.querySelector("#catalog-title").textContent =
-    moduleId === "rhumatologie"
-      ? "Zones enregistrées"
-      : moduleId === "digestif"
-        ? "Symptômes et événements"
-        : "Éléments enregistrés";
   for (const id of Object.keys(MODULES)) {
     const count = data.catalog.filter((item) =>
       isItemInModule(item, id),
@@ -864,7 +862,7 @@ export function renderAll(
   renderBodyMap(data, moduleId, bodyMapState);
   renderStats(filteredData(data, moduleId), elements.moduleStats);
   renderHistory(data, elements.moduleHistory, { moduleId, actions: true });
-  renderCatalog(data, moduleId);
+  renderCatalog(data, null);
 }
 
 /** Adapter les choix au module sans modifier le classement des anciennes données. */

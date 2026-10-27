@@ -117,7 +117,7 @@ legend {
   color: #8f2620;
 }
 .button-small {
-  min-height: 36px;
+  min-height: 44px;
   padding: 7px 10px;
 }
 .button-full {
@@ -799,4 +799,91 @@ input[type="range"] {
 }
 .bristol-choice span {
   overflow-wrap: anywhere;
+}
+
+/* Actions quotidiennes compactes, avec des cibles tactiles de 44 px minimum. */
+.app-header {
+  position: relative;
+  padding-right: 4.5rem;
+}
+.settings-gear {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  font-size: 1.4rem;
+}
+.compact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.7rem 0;
+}
+.compact-actions .button,
+.history-actions .button,
+.digestive-actions > .button {
+  width: auto;
+  min-height: 44px;
+}
+.digestive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+}
+.transit-passage-group {
+  flex-basis: 100%;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.8rem;
+}
+.transit-passage-group h3 {
+  grid-column: 1 / -1;
+}
+.transit-passage-group .button {
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: 0.7rem;
+}
+.button.is-confirmed {
+  background: #d9efdf;
+  color: #15552b;
+  border-color: #38774a;
+}
+#settings-dialog .dialog-toolbar {
+  justify-content: space-between;
+  align-items: center;
+}
+#settings-dialog h2 {
+  margin: 0;
+}
+#settings-dialog .catalog-row {
+  gap: 0.7rem;
+}
+#settings-dialog .catalog-row > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#episode-fields .field {
+  display: flex;
+  flex-direction: column;
+}
+#episode-fields .field > span {
+  order: 0;
+}
+#episode-fields .field > input {
+  order: 1;
+}
+#episode-fields .field > button {
+  order: 2;
+  align-self: flex-start;
+}
+
+@media (max-width: 360px) {
+  #settings-dialog .catalog-row {
+    flex-wrap: wrap;
+  }
+  #settings-dialog .catalog-row > div {
+    flex-basis: 150px;
+    flex-grow: 1;
+  }
 }

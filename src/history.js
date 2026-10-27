@@ -2,6 +2,7 @@ import {
   getEpisodeViews,
   getPresenceChecks,
   getEvolution,
+  lastPresence,
 } from "./episodes.js";
 import { getDigestive, localDate } from "./digestive.js";
 
@@ -91,4 +92,57 @@ export function getEpisodeCheckRows(episode) {
     }
     return { ...check, evolution };
   });
+}
+
+/** Le délai de 48 h est un filtre d'affichage, jamais une clôture. */
+export function getFollowupRows(data, now = Date.now()) {
+  return getHistoryRows(data)
+    .filter((row) => {
+      const episode = row.episode;
+      if (!episode || episode.endedAt || episode.closedUnknown) return false;
+      const criteria = episode.configSnapshot?.criteria;
+      if (
+        criteria &&
+        !criteria.some((key) => ["stillPresent", "finish"].includes(key))
+      )
+        return false;
+      const age = Number(now) - Date.parse(lastPresence(episode));
+      return age >= 0 && age < 48 * 60 * 60 * 1000;
+    })
+    .sort(
+      (a, b) =>
+        Date.parse(lastPresence(b.episode)) -
+        Date.parse(lastPresence(a.episode)),
+    );
+}
+
+/** Un raccourci par symptôme déclaré ce jour, sans heure supposée. */
+export function getTodayOccurrenceRows(data, now = new Date()) {
+  const seen = new Set();
+  return getHistoryRows(data, { moduleId: "digestif" }).filter((row) => {
+    if (
+      !row.episode ||
+      row.date !== localDate(now) ||
+      seen.has(row.episode.itemId)
+    )
+      return false;
+    const item = data.catalog.find((item) => item.id === row.episode.itemId);
+    const criteria =
+      item?.config?.criteria || row.episode.configSnapshot?.criteria || [];
+    if (!criteria.includes("newOccurrence")) return false;
+    seen.add(row.episode.itemId);
+    return true;
+  });
+}
+
+/** Prochain changement d'affichage : expiration exacte ou minuit local. */
+export function nextDailyRefreshAt(data, now = Date.now()) {
+  const midnight = new Date(now);
+  midnight.setHours(24, 0, 0, 0);
+  return Math.min(
+    midnight.getTime(),
+    ...getFollowupRows(data, now).map(
+      (row) => Date.parse(lastPresence(row.episode)) + 48 * 60 * 60 * 1000,
+    ),
+  );
 }

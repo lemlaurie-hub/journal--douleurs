@@ -313,3 +313,16 @@ Le schéma racine reste 1 ; le format de sauvegarde passe à **3**, avec lecture
 - Chromium a pu être installé pour ce lot via un paquet de distribution, contrairement au téléchargement standard qui avait échoué auparavant. Les essais ont réellement été exécutés. Cela ne remplace pas une validation sur le téléphone Android de Laurie.
 - Les ressources et le cache sont préparés pour la version 4.8.0. Accord distinct de publication donné par Laurie le 26 octobre 2026 pour tests. Vérifier `main`, les ressources distantes et GitHub Pages avant d’annoncer la mise en ligne.
 - Pour une publication atomique incluant plusieurs nouveaux modules/illustrations, l’interface GitHub peut créer les blobs, un arbre basé sur la tête vérifiée, puis un seul commit et un déplacement non forcé de `main`. Cela évite un déploiement intermédiaire incomplet. Ne jamais utiliser `git push` sans identifiants ni écraser une tête distante qui a changé.
+
+## Correctifs du 27 octobre 2026 — version 4.8.1 préparée
+
+Développement autorisé par la liste explicite de correctifs de Laurie ; **publication autorisée séparément par Laurie le 27 octobre 2026 après validation du bilan**. Base distante vérifiée : `3cec3eb4a721683527ba89dc1b2d9936de0a1260`. Détails : `docs/BILAN_CORRECTIFS_2026_10_27.md`.
+
+- Paramètres via roue dentée, catalogue commun toutes familles et conditions dans les éditeurs existants. `ensureDigestivePresets` matérialise les sept propositions sans créer d'observation ; `presetKey` conserve leur identité après renommage. Le sélecteur utilise `getDigestiveSymptomChoices`.
+- Tous les critères numériques 0–10 utilisent `scale` et `bindNumericRange`, y compris la douleur du transit. Zéro, vide et ancienne valeur absente restent distincts. Rhumato conserve ses niveaux qualitatifs.
+- `getFollowupRows`, `getTodayOccurrenceRows` et `nextDailyRefreshAt` dans `history.js` pilotent les raccourcis, sans écriture métier. Expiration à 48 h après la dernière présence ; changement de jour civil local pour les occurrences. Minuteur et reprise après veille ; aucune fiche réinitialisée.
+- Le constat direct d'accueil emprunte `savePresenceCheck`, sans intensité par défaut puisqu'aucun champ n'est présenté. Les autres constats et leurs corrections gardent leur éditeur commun.
+- `finishEpisode(..., null)` clôture avec heure inconnue : `closedUnknown`, trace `closure`, aucun `endedAt` supposé. Une fin connue reste corrigeable et n'est pas effacée par ce raccourci. Les clôtures automatiques et cibles anciennes sont préservées.
+- Statistiques et Historique fermés à chaque entrée dans le module ; les rendus après enregistrement ne changent pas leur ouverture. L'état n'est pas stocké.
+- Aucun changement du schéma 1 ni du format de sauvegarde 3. Ressources/cache préparés pour 4.8.1 ; publication autorisée, vérifier le déploiement distant.
+- Tests : 96 tests moteur et 28 parcours Chromium (16 du lot 2 + 12 correctifs), données synthétiques. Le contrôle Android réel reste à effectuer après publication autorisée.

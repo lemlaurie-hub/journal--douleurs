@@ -1,11 +1,6 @@
-import {
-  DIGESTIVE_PRESETS,
-  getItemConfig,
-  getEditableConfig,
-  initialValues,
-} from "./criteria.js";
+import { getItemConfig, getEditableConfig, initialValues } from "./criteria.js";
 import { renderCriteriaFields, readCriteriaFields } from "./criteria-ui.js";
-import { createCatalogItem } from "./catalog.js";
+import { createCatalogItem, getDigestiveSymptomChoices } from "./catalog.js";
 import {
   createIndependentEntries,
   getEpisode,
@@ -53,37 +48,22 @@ function renderLevels(levels = []) {
 function populateSymptoms(selected = "") {
   const select = $("#episode-symptom");
   select.replaceChildren(new Option("Choisir un symptôme ou événement", ""));
-  const existing = data.catalog.filter(
-    (item) => item.family === "digestif" && item.kind !== "zone",
-  );
-  existing.forEach((item) => select.add(new Option(item.label, item.id)));
-  DIGESTIVE_PRESETS.filter(
-    (preset) =>
-      !existing.some(
-        (item) =>
-          item.label.toLocaleLowerCase("fr") ===
-          preset.label.toLocaleLowerCase("fr"),
-      ),
-  ).forEach((preset) =>
-    select.add(new Option(preset.label, `preset:${preset.key}`)),
+  getDigestiveSymptomChoices(data).forEach((item) =>
+    select.add(new Option(item.label, item.id)),
   );
   select.value = selected;
 }
 
 function selectedItem() {
   const value = $("#episode-symptom").value;
-  if (value.startsWith("preset:")) {
-    const preset = DIGESTIVE_PRESETS.find(
-      (item) => item.key === value.slice(7),
-    );
-    return {
-      label: preset.label,
-      family: "digestif",
-      kind: "symptome",
-      config: { version: 1, criteria: preset.criteria },
-    };
+  const choice = getDigestiveSymptomChoices(data).find(
+    (item) => item.id === value,
+  );
+  if (choice?.id.startsWith("preset:")) {
+    const { id, ...input } = choice;
+    return input;
   }
-  return data.catalog.find((item) => item.id === value) || null;
+  return choice || null;
 }
 
 function renderSelectedSymptom() {
@@ -100,6 +80,10 @@ function renderSelectedSymptom() {
 export function openDigestiveSymptom() {
   state = { mode: "create", timestamp: new Date().toISOString() };
   $("#episode-form").reset();
+  $("#episode-end-unknown-group").hidden = true;
+  $("#episode-at-label").textContent = "Date et heure";
+  $("#episode-at").disabled = false;
+  $("#episode-at").required = true;
   $("#episode-title").textContent = "Symptôme digestif";
   $("#episode-symptom-group").hidden = false;
   $("#episode-symptom").required = true;
@@ -152,7 +136,18 @@ function openEpisodeAction(
     `${names[mode]} — ${item?.label || episode.itemSnapshot?.label || "Observation"}`;
   $("#episode-symptom-group").hidden = true;
   $("#episode-symptom").required = false;
-  $("#episode-at").value = mode === "past" ? "" : localInput(state.timestamp);
+  // Le constat de fin est distinct de l'heure réelle de fin.
+  $("#episode-end-unknown-group").hidden = mode !== "finish";
+  $("#episode-end-unknown").checked = mode === "finish" && !episode.endedAt;
+  $("#episode-end-unknown").disabled = Boolean(episode.endedAt);
+  $("#episode-at-label").textContent =
+    mode === "finish" ? "Heure réelle de fin (si connue)" : "Date et heure";
+  $("#episode-at").required = mode !== "finish" || Boolean(episode.endedAt);
+  $("#episode-at").disabled = mode === "finish" && !episode.endedAt;
+  $("#episode-at").value =
+    mode === "past" || (mode === "finish" && !episode.endedAt)
+      ? ""
+      : localInput(state.timestamp);
   $("#episode-levels-group").hidden = !rhumato || mode === "finish";
   $("#episode-fields").hidden = rhumato || mode === "finish";
   $("#episode-preserve-group").hidden = mode !== "edit";
@@ -216,7 +211,18 @@ export function handleEpisodeCommand(button) {
       button.dataset.targetKey,
     );
     const command = button.dataset.episodeCommand;
-    if (command === "occurrence") {
+    if (command === "still" && button.dataset.instant === "true") {
+      // Le raccourci confirme la présence uniquement : aucune intensité supposée.
+      commit((next) =>
+        savePresenceCheck(next, episode.rawEntryId, episode.targetKey, {
+          occurredAt: clickedAt,
+          values: {},
+          levels: [],
+          note: "",
+        }),
+      );
+      notify("Encore présent : constat enregistré à l’heure du clic.");
+    } else if (command === "occurrence") {
       commit((next) =>
         addOccurrence(next, episode.rawEntryId, episode.targetKey, clickedAt),
       );
@@ -254,6 +260,10 @@ export function setupEpisodeUi(source, transaction, showToast, options) {
   commit = transaction;
   notify = showToast;
   callbacks = options;
+  $("#episode-end-unknown").addEventListener("change", (event) => {
+    $("#episode-at").disabled = event.target.checked;
+    $("#episode-at").required = !event.target.checked;
+  });
   $("#episode-symptom").addEventListener("change", renderSelectedSymptom);
   $("#episode-new-symptom").addEventListener("click", () =>
     callbacks.openCatalog({ family: "digestif" }),
@@ -276,9 +286,11 @@ export function setupEpisodeUi(source, transaction, showToast, options) {
     try {
       const inputTime = $("#episode-at").value;
       const occurredAt =
-        inputTime === localInput(state.timestamp)
-          ? state.timestamp
-          : new Date(inputTime).toISOString();
+        state.mode === "finish" && $("#episode-end-unknown").checked
+          ? null
+          : inputTime === localInput(state.timestamp)
+            ? state.timestamp
+            : new Date(inputTime).toISOString();
       const values = readCriteriaFields($("#episode-fields"));
       const levels = [
         ...$("#episode-levels").querySelectorAll("input:checked"),

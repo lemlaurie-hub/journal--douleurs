@@ -1,3 +1,4 @@
+import { bindNumericRange } from "./criteria-ui.js";
 import { openDialog, closeDialog } from "./dialogs.js";
 import { openDigestiveSymptom } from "./episode-ui.js";
 import {
@@ -113,8 +114,11 @@ function openTransit(kind, event = null) {
   $("#transit-at").value = dateInput(event?.occurredAt || new Date());
   $("#transit-note").value = event?.note || "";
   $("#transit-passage-fields").hidden = !passage;
-  $("#transit-pain").value = event?.pain ?? 0;
-  $("#transit-pain-value").textContent = `${event?.pain ?? 0} / 10`;
+  bindNumericRange(
+    $("#transit-pain"),
+    $("#transit-pain-value"),
+    event?.pain ?? 0,
+  );
   const types = event?.bristol.types || (passage ? [] : [7]);
   $("#transit-bristol")
     .querySelectorAll("input")
@@ -197,6 +201,11 @@ function renderConditionManager() {
 export function renderDigestive() {
   if (!data) return;
   showDay();
+  const confirmed = getTransitDay(data, localDate()).noPassage;
+  const none = $("#transit-open-none");
+  none.classList.toggle("is-confirmed", Boolean(confirmed));
+  none.textContent = confirmed ? "✓ Aucun" : "⊘ Aucun";
+  none.setAttribute("aria-pressed", String(Boolean(confirmed)));
   renderConditionManager();
 }
 
@@ -249,20 +258,12 @@ export function setupDigestive(state, persistAndRender, showToast) {
     openTransit("accident"),
   );
   $("#transit-open-symptom").addEventListener("click", openDigestiveSymptom);
-  $("#transit-open-history").addEventListener("click", () => {
-    const section = $("#module-history").closest("details");
-    section.open = true;
-    section.scrollIntoView({ behavior: "smooth" });
-  });
   $("#transit-close").addEventListener("click", () =>
     closeDialog($("#transit-dialog")),
   );
   $("#bristol-image-close").addEventListener("click", () =>
     closeDialog($("#bristol-image-dialog")),
   );
-  $("#transit-pain").addEventListener("input", (event) => {
-    $("#transit-pain-value").textContent = `${event.target.value} / 10`;
-  });
   $("#transit-form").addEventListener("submit", (event) => {
     event.preventDefault();
     attempt(() => {
